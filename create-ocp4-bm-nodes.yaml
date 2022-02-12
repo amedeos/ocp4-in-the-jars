@@ -1,0 +1,15 @@
+- name: Create Bootstrap Node
+  import_playbook: create-bootstrap.yaml
+  tags:
+    - create-bootstrap
+
+- name: Create Master Nodes
+  import_playbook: create-masters.yaml
+  tags:
+    - create-masters
+
+- name: Create Workers Nodes
+  import_playbook: create-workers.yaml
+  tags:
+    - create-workers
+

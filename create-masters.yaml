@@ -1,0 +1,48 @@
+- name:  Add hypervisor host in inventory
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    with_items: "{{ master_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+- name:  Build master hosts
+  hosts:
+    - localhost
+    - hypervisor_host
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Create 100GB Image for each master
+    shell: |
+      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2 100G
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ master_nodes }}"
+
+  - name: Defining the Overcloud masters
+    shell: |
+      virt-install --ram {{ master_memory }} --vcpus {{ master_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virsh define /tmp/{{ item.name }}.xml
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ master_nodes }}"
+  
+  # TODO: check ip address available in the hypervisor
+  - name: Create virtualbmc interface
+    shell: |
+      vbmc add "{{ item.name }}" --address "{{ item.vbmc_ip }}" --port "{{ item.vbmc_port }}" --username admin --password "{{ secure_password }}"
+      vbmc start "{{ item.name }}"
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ master_nodes }}"
+

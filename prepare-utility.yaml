@@ -1,0 +1,311 @@
+- name:  Add hypervisor host in inventory
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+- name:  Build Utility VM/Node
+  hosts:
+    - localhost
+    - hypervisor_host
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Copying Template Image to create utility. RHEL8
+    copy:
+      src: "{{ item.hypervisor_image_dir }}/rhel8-utility.qcow2"
+      dest: "{{ item.hypervisor_image_dir }}/utility.qcow2"
+      remote_src: True
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Defining the utility vm
+    shell: |
+      virt-install --ram {{ utility_memory }} --vcpus {{ utility_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virsh define /tmp/{{ item.name }}.xml
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  # TODO: check ip address available in the hypervisor
+  - name: Create virtualbmc interface
+    shell: |
+      vbmc add "{{ item.name }}" --address "{{ item.vbmc_ip }}" --port "{{ item.vbmc_port }}" --username admin --password "{{ secure_password }}"
+      vbmc start "{{ item.name }}"
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Starting utility vm
+    virt:
+      name: "{{ item.name }}"
+      state: running
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Sleeping till ssh on utility vm is up
+    wait_for:
+      port: 22
+      host: "{{ utility_prov_ip }}"
+      delay: 20
+      timeout: 300
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Remove temp directory for ssh key
+    file:
+      path: ansible-ssh
+      state: absent
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Create temp directory for ssh key
+    file:
+      path: ansible-ssh
+      state: directory
+      mode: '0700'
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Write ssh key
+    template:
+      dest: "ansible-ssh/id_rsa"
+      src: "{{ ssh_key }}"
+      mode: 0600
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Add newline at the end of ssh key
+    shell: |
+      echo  >> ansible-ssh/id_rsa
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Update /etc/hosts with utility entry
+    lineinfile:
+      path: /etc/hosts
+      backup: True
+      regexp: "{{ utility_n }}.{{ domain }}"
+      line: "{{ utility_prov_ip }}\t{{ utility_n }}.{{ domain }}\t{{ utility_n }}"
+      state: present
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Ensure .ssh directory is present
+    file:
+      path: ~/.ssh
+      state: directory
+      mode: '0700'
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Create ssh/config file
+    file:
+      path: ~/.ssh/config
+      state: touch
+      mode: '0644'
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Write ssh/config file
+    blockinfile:
+      path: ~/.ssh/config
+      backup: True
+      state: present
+      block: |
+        Host {{ utility_n }}.{{ domain }}
+        IdentityFile ~/ansible-ssh/id_rsa
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Add utility group-host
+    add_host:
+      name: "{{ utility_n }}.{{ domain }}"
+      ansible_ssh_user: root
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+      groups:
+        - utility
+    with_items: "{{ utility_nodes }}"
+
+  - name: Write commodity hosts-utility-root file
+    copy:
+      dest: hosts-utility-root
+      content: |
+        [utility]
+        {{ utility_n }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+    with_items: "{{ utility_nodes }}"
+
+  - name: Write commodity hosts-utility-kni file
+    copy:
+      dest: hosts-utility-kni
+      content: |
+        [utility]
+        {{ utility_n }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+    with_items: "{{ utility_nodes }}"
+
+- name:  Prepare Utility Node
+  hosts: utility
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Setting up hostname
+    hostname:
+      name: "utility.{{ domain }}"
+
+  - name: Set timezone to UTC
+    timezone:
+      name: UTC
+
+  - name: Registering Utility
+    redhat_subscription:
+      state: present
+      username: "{{ rh_subcription_user }}"
+      password: "{{ rh_subcription_password }}"
+      force_register: True
+
+  - name: Attach poolid
+    shell: |
+      subscription-manager attach --pool={{ rh_subcription_pool }}
+
+  - name: Set repository for the utility
+    shell: |
+      subscription-manager repos --disable='*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms 
+
+  - name: Clean yum cache
+    command: yum clean all
+
+  - name: Updating system to latest version
+    dnf:
+      name: '*'
+      state: latest
+
+  - name: Reboot utility
+    reboot:
+
+  - name: Install Basic Required Packages
+    dnf:
+      name:
+        - bind
+        - bind-utils
+        - httpd
+        - podman
+        - wget
+        - mlocate
+        - sshpass
+        - vim-enhanced
+        - tmux
+        - iptables
+        - bash-completion
+        - tree
+        - redhat-lsb-core
+        - ipmitool
+
+  - name: Create User kni
+    user:
+      name: kni
+
+  - name: Reset kni password
+    shell: |
+      echo -n {{ secure_password }} | passwd --stdin kni
+
+  - name: Assign sudo power to kni user
+    copy:
+      dest: /etc/sudoers.d/kni
+      content: |
+        kni ALL=(root) NOPASSWD:ALL
+
+  - name: Setting proper permission to /etc/sudoers.d/kni
+    file:
+      path: /etc/sudoers.d/kni
+      mode: '0440'
+
+  - name: Creates /home/kni/.ssh directory
+    file:
+      path: /home/kni/.ssh
+      owner: kni
+      group: kni
+      mode: 0700
+      state: directory
+
+  - name: Copy Root Authorized Keys to kni User
+    copy:
+      src: /root/.ssh/authorized_keys
+      dest: /home/kni/.ssh/authorized_keys
+      remote_src: yes
+
+  - name: Copy ssh hey
+    copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: kni
+      group: kni
+      mode: "{{ item.mode }}"
+    with_items:
+      - { src: files/.ssh/id_rsa, dest: /home/kni/.ssh/id_rsa, mode: "0600" }
+      - { src: files/.ssh/id_rsa.pub, dest: /home/kni/.ssh/id_rsa.pub, mode: "0644" }
+
+  - name: Add newline at the end of ssh key
+    shell: |
+      echo  >> /home/kni/.ssh/id_rsa
+
+  - name: Setting proper ownership to /home/kni/.ssh/authorized_keys
+    file:
+      path: /home/kni/.ssh/authorized_keys
+      owner: kni
+      group: kni
+
+  - name: Configure named.conf
+    template:
+      src: ansible-templates/etc/named.conf.j2
+      dest: /etc/named.conf
+      backup: True
+      mode: 0640
+      owner: root
+      group: named
+
+  - name: Configure forward domain
+    template:
+      src: "ansible-templates/var/named/{{ domain }}.db"
+      dest: "/var/named/{{ domain }}.db"
+      backup: True
+      owner: root
+      group: named
+
+  - name: Configure reverse domain
+    template:
+      src: "ansible-templates/var/named/{{ domain }}.reverse.db"
+      dest: "/var/named/{{ domain }}.reverse.db"
+      backup: True
+      owner: root
+      group: named
+
+  - name: Enable named service
+    systemd:
+      name: named
+      state: restarted
+      daemon_reload: True
+      enabled: True

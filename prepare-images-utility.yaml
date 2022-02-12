@@ -1,0 +1,122 @@
+- name:  Prepare Various Images required for Installation
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+- name:  Build controller hosts
+  hosts:
+    - localhost
+    - hypervisor_host
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Copying RHEL-8 Image from web to images dir
+    get_url:
+      url: "{{ image_location }}"
+      dest: "{{ item.hypervisor_image_dir }}/{{ supported_os }}.qcow2"
+      mode: '0660'
+      owner: root
+      group: root
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Create a new 100GB Blank Image
+    shell: |
+      qemu-img create -f qcow2  {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2 100G
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Resizing the filesystem to 100G
+    shell: |
+      virt-resize --format qcow2 --expand /dev/sda3 {{ item.hypervisor_image_dir }}/{{ supported_os }}.qcow2 {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2
+    environment:
+      LIBGUESTFS_PATH: "{{ libguestfs_path }}"
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Copy ssh_pub to temp dir
+    copy:
+      src: "{{ ssh_pub }}"
+      dest: "/tmp/id_rsa.pub"
+
+  - name: Customizing the image to set root password, push ssh key and remove cloud-init
+    shell: |
+      virt-customize -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2 --root-password password:"{{ secure_password }}" --ssh-inject "root:file:/tmp/id_rsa.pub" --selinux-relabel --run-command 'yum remove cloud-init* -y'
+    environment:
+      LIBGUESTFS_PATH: "{{ libguestfs_path }}"
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+- name:  Prepare utility host Golden Image
+  hosts:
+    - localhost
+    - hypervisor_host
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Copy Base Image to create utility host image
+    copy:
+      src: "{{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2"
+      dest: "{{ item.hypervisor_image_dir }}/{{ supported_os }}-utility.qcow2"
+      remote_src: True
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Create /tmp/ifcfg-eth0 for RHEL8
+    copy:
+      dest: /tmp/ifcfg-eth0
+      mode: '0644'
+      content: |
+        DEVICE=eth0
+        ONBOOT=yes
+        IPADDR={{ utility_prov_ip }}
+        NETMASK={{ utility_prov_netmask }}
+        DEFROUTE=no
+        NM_CONTROLLED=yes
+        DNS1={{ dns_ip_utility }}
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Create /tmp/ifcfg-eth1 for RHEL8
+    copy:
+      dest: /tmp/ifcfg-eth1
+      mode: '0644'
+      content: |
+        DEVICE=eth1
+        TYPE=Ethernet
+        IPADDR={{ utility_bm_ip }}
+        GATEWAY={{ utility_bm_gw }}
+        NETMASK={{ utility_bm_netmask }}
+        ONBOOT=yes
+        NM_CONTROLLED=yes
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Copying Config files to the rhel8 utility image
+    shell: |
+      virt-copy-in -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-utility.qcow2 /tmp/ifcfg-eth0 /tmp/ifcfg-eth1 /etc/sysconfig/network-scripts/
+    environment:
+      LIBGUESTFS_PATH: "{{ libguestfs_path }}"
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"

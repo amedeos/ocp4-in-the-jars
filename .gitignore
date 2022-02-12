@@ -1,0 +1,7 @@
+*.swp
+*.orig
+ansible-ssh
+*.tar.*
+*.temp
+hosts-utility*
+hosts-bastion*

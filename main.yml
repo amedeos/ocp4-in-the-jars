@@ -1,0 +1,23 @@
+- import_playbook: prepare-images-bastion.yaml
+  tags:
+    - prepare-images-bastion
+
+- import_playbook: prepare-images-utility.yaml
+  tags:
+    - prepare-images-utility
+
+- import_playbook: create-ocp4-bm-nodes.yaml
+  tags:
+    - create-ocp4-bm-nodes
+
+- import_playbook: prepare-utility.yaml
+  tags:
+    - prepare-utility
+
+- import_playbook: prepare-bastion.yaml
+  tags:
+    - prepare-bastion
+
+#- import_playbook: configure-bastion.yaml
+#  tags:
+#    - configure-bastion
