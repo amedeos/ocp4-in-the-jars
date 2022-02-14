@@ -1,0 +1,97 @@
+apiVersion: v1
+baseDomain: example.com
+metadata:
+  name: ocp4-lab
+networking:
+  machineNetwork:
+  - cidr: 192.168.203.0/24
+  networkType: OVNKubernetes
+compute:
+- name: worker
+  replicas: 3
+controlPlane:
+  name: master
+  replicas: 3
+  platform:
+    baremetal: {}
+platform:
+  baremetal:
+    #apiVIP: 192.168.203.80
+    #ingressVIP: 192.168.203.80
+    provisioningNetworkCIDR: 192.168.201.0/24
+    provisioningNetworkInterface: ens4
+    provisioningBridge: "provisioning"
+    provisioningDHCPRange: 192.168.201.140,192.168.201.160
+    provisioningNetwork: Managed
+    clusterProvisioningIP: 192.168.201.50
+    bootstrapProvisioningIP: 192.168.201.51
+    externalBridge: "baremetal"
+    hosts:
+      - name: master-0
+        role: master
+        bmc:
+          address: ipmi://192.168.201.102
+          username: admin
+          password: redhat
+        bootMACAddress: 52:54:00:00:32:00
+        rootDeviceHints:
+         deviceName: "/dev/vda"
+        bootMode: legacy
+        hardwareProfile: default
+      - name: master-1
+        role: master
+        bmc:
+          address: ipmi://192.168.201.103
+          username: admin
+          password: redhat
+        bootMACAddress: 52:54:00:00:32:01
+        rootDeviceHints:
+         deviceName: "/dev/vda"
+        bootMode: legacy
+        hardwareProfile: default
+      - name: master-2
+        role: master
+        bmc:
+          address: ipmi://192.168.201.104
+          username: admin
+          password: redhat
+        bootMACAddress: 52:54:00:00:32:02
+        rootDeviceHints:
+         deviceName: "/dev/vda"
+        bootMode: legacy
+        hardwareProfile: default
+      - name: worker-0
+        role: worker
+        bmc:
+          address: ipmi://192.168.201.13
+          username: admin
+          password: redhat
+        bootMACAddress: 52:54:00:00:32:03
+        rootDeviceHints:
+         deviceName: "/dev/vda"
+        bootMode: legacy
+        hardwareProfile: default
+      - name: worker-1
+        role: worker
+        bmc:
+          address: ipmi://192.168.201.14
+          username: admin
+          password: redhat
+        bootMACAddress: 52:54:00:00:32:04
+        rootDeviceHints:
+         deviceName: "/dev/vda"
+        bootMode: legacy
+        hardwareProfile: default
+      - name: worker-2
+        role: worker
+        bmc:
+          address: ipmi://192.168.201.117
+          username: admin
+          password: redhat
+        bootMACAddress: 52:54:00:00:32:05
+        rootDeviceHints:
+         deviceName: "/dev/vda"
+        bootMode: legacy
+        hardwareProfile: default
+pullSecret: '{{ pull_secret }}'
+sshKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCdNy1LB9Evo+Im0nnKrKbi9FJVzYRHLTb640akhixVLiecurHAXhAeY8rUN39H122P4iEZV+EJNIsJsVnGUsXXryOpOUJCjCwWTduOMZM0j5r/Ccm//dtx8TEemK3J8ywLgwymCOsKyv+VNRhc8itOi2iKqpLv0kFFRbJ0dlprxgNacKqSH0s3niGNZfxr6eS3B/HdY+hqSHVqr66Mhd2YeLKpTNN8SI15j8fN9zFuvR5CQmLvbAbGxiZlN31o2L65a6zNE/Sa2bGFDaBnuYELsjfZ8+On8BE2ePhX6USeBB+N7MaT6HaLs3JSAlLCKZuuO/yHS2F9R5T/zBAw6Ghmi8ITmu1oSxoglFqmiXWY4lSD9CjBE8BtYsN+I+mQ/s6OKTKVqc0KgorAmqBwC2ZeBDnyChmu7rhhHeiVKOJRw7B7I3PRF8/xMnpZe+JDTE5DTjTjO0GgwMI6dWJja+1lHjbpdT61vcjhvdV4OfOSy7KCqXNtDFOcWM6HC0KMzes= amedeo@cesare-desktop'

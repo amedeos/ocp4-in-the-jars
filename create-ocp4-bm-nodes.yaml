@@ -1,7 +1,7 @@
-- name: Create Bootstrap Node
-  import_playbook: create-bootstrap.yaml
-  tags:
-    - create-bootstrap
+#- name: Create Bootstrap Node
+#  import_playbook: create-bootstrap.yaml
+#  tags:
+#    - create-bootstrap
 
 - name: Create Master Nodes
   import_playbook: create-masters.yaml

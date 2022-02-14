@@ -211,6 +211,7 @@
       name:
         - bind
         - bind-utils
+        - dhcp-server
         - httpd
         - podman
         - wget
