@@ -310,3 +310,20 @@
       state: restarted
       daemon_reload: True
       enabled: True
+
+  - name: Configure dhcpd.conf
+    template:
+      src: ansible-templates/etc/dhcp/dhcpd.conf.j2
+      dest: /etc/dhcp/dhcpd.conf
+      backup: True
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Enable dhcpd service
+    systemd:
+      name: dhcpd
+      state: restarted
+      daemon_reload: True
+      enabled: True
+

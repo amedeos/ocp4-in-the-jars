@@ -1,0 +1,22 @@
+ddns-update-style interim;
+ignore client-updates;
+authoritative;
+allow unknown-clients;
+# Set default and max IP lease time to infinite  with -1 value
+default-lease-time -1;
+max-lease-time -1;
+
+subnet 192.168.203.0 netmask 255.255.255.0 {
+        option routers 192.168.203.1;
+        option domain-name-servers 192.168.203.254;
+        option ntp-servers 103.16.182.23,103.16.182.214;
+        option domain-search "ocp4-lab.example.com","example.com";
+        range 192.168.203.95 192.168.203.96;
+        host master-0.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:00; fixed-address 192.168.203.53; option host-name "master-0"; }
+        host master-1.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:01; fixed-address 192.168.203.54; option host-name "master-1"; }
+        host master-2.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:02; fixed-address 192.168.203.55; option host-name "master-2"; }
+        host worker-0.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:03; fixed-address 192.168.203.56; option host-name "worker-0"; }
+        host worker-1.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:04; fixed-address 192.168.203.57; option host-name "worker-1"; }
+        host worker-2.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:05; fixed-address 192.168.203.58; option host-name "worker-2"; }
+}
+
