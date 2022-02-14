@@ -25,19 +25,6 @@
             "vbmc_port": "623"
         }
      ],
-    "bootstrap_nodes": [
-        {
-            "name": "bootstrap",
-            "state": "present",
-            "hypervisor_name": "amelab01.example.com",
-            "hypervisor_user": "root",
-            "hypervisor_ssh_key": "~/.ssh/id_rsa",
-            "hypervisor_image_dir": "/var/lib/libvirt/images",
-            "vbmc_pre_cmd": "",
-            "vbmc_ip": "192.168.201.116",
-            "vbmc_port": "623"
-        }
-     ],
     "master_nodes": [
         {
             "name": "master-0",
@@ -47,6 +34,8 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
+            "prov_mac": "52:54:00:00:32:00",
+            "bm_mac": "52:54:00:00:33:00",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.102",
             "vbmc_port": "623"
@@ -59,6 +48,8 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
+            "prov_mac": "52:54:00:00:32:01",
+            "bm_mac": "52:54:00:00:33:01",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.103",
             "vbmc_port": "623"
@@ -71,6 +62,8 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
+            "prov_mac": "52:54:00:00:32:02",
+            "bm_mac": "52:54:00:00:33:02",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.104",
             "vbmc_port": "623"
@@ -85,6 +78,8 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/imagesssd",
+            "prov_mac": "52:54:00:00:32:03",
+            "bm_mac": "52:54:00:00:33:03",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.13",
             "vbmc_port": "623"
@@ -97,6 +92,8 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/imagesssd",
+            "prov_mac": "52:54:00:00:32:04",
+            "bm_mac": "52:54:00:00:33:04",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.14",
             "vbmc_port": "623"
@@ -109,6 +106,8 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
+            "prov_mac": "52:54:00:00:32:05",
+            "bm_mac": "52:54:00:00:33:05",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.117",
             "vbmc_port": "623"
