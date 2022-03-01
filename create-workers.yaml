@@ -24,7 +24,7 @@
   tasks:
   - name: Create 100GB Image for each worker
     shell: |
-      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2 100G
+      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2 150G
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ worker_nodes }}"
