@@ -18,6 +18,6 @@
   tags:
     - prepare-bastion
 
-#- import_playbook: configure-bastion.yaml
-#  tags:
-#    - configure-bastion
+- import_playbook: configure-bastion.yaml
+  tags:
+    - configure-bastion
