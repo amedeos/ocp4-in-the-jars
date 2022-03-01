@@ -11,7 +11,7 @@ subnet 192.168.203.0 netmask 255.255.255.0 {
         option domain-name-servers 192.168.203.254;
         option ntp-servers 103.16.182.23,103.16.182.214;
         option domain-search "ocp4-lab.example.com","example.com";
-        range 192.168.203.95 192.168.203.96;
+        range 192.168.203.90 192.168.203.110;
         host master-0.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:00; fixed-address 192.168.203.53; option host-name "master-0"; }
         host master-1.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:01; fixed-address 192.168.203.54; option host-name "master-1"; }
         host master-2.ocp4-lab.example.com { hardware ethernet 52:54:00:00:33:02; fixed-address 192.168.203.55; option host-name "master-2"; }

@@ -10,7 +10,8 @@ $TTL  1D
 dns                       IN A 192.168.203.254
 utility                   IN A 192.168.203.254
 api                       IN A 192.168.203.80
-*.apps                    IN A 192.168.203.80
+api-int                   IN A 192.168.203.80
+*.apps                    IN A 192.168.203.81
 bastion                   IN A 192.168.203.50
 bootstrap                 IN A 192.168.203.51
 provisioner               IN A 192.168.203.52

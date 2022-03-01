@@ -8,6 +8,7 @@ $TTL  1D
               )
           IN NS dns.{{ domain }}.
 80        IN PTR api.{{ domain }}.
+80        IN PTR api-int.{{ domain }}.
 50        IN PTR bastion.{{ domain }}.
 51        IN PTR bootstrap.{{ domain }}.
 52        IN PTR provisioner.{{ domain }}.
