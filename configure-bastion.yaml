@@ -227,3 +227,11 @@
         sudo virsh pool-destroy $i;
         sudo virsh pool-undefine $i;
       done
+
+  - name: Create vimrc file
+    template:
+      src: ansible-templates/home/kni/vimrc
+      dest: /home/kni/.vimrc
+      owner: kni
+      group: kni
+      mode: 0664
