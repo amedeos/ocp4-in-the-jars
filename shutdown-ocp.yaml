@@ -1,0 +1,88 @@
+- name: Create inventory
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add bastion group-host
+    add_host:
+      name: "{{ bastion_n }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+
+  - name: Add utility group-host
+    add_host:
+      name: "{{ utility_n }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+      groups:
+        - utility
+    with_items:
+      - "{{ utility_nodes }}"
+
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    with_items:
+      - "{{ bastion_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+    when:
+      - item.hypervisor_name != "localhost"
+      - item.state == "present"
+
+- name: Shutdown bastion and utility
+  hosts:
+    - bastion
+    - utility
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  ignore_errors: True
+  ignore_unreachable: True
+  gather_facts: False
+  tasks:
+  - name: Shutdown host
+    shell: |
+      shutdown -h now
+    ignore_errors: True
+
+- name: Shutdown worker and master
+  hosts:
+    - localhost
+    - hypervisor_host
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Sleep 10 seconds
+    pause:
+      seconds: 10
+
+  - name: Destroy virsh domain
+    virt:
+      name: "{{ item.name }}"
+      state: destroyed
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    when:
+      - item.state == "present"
+    with_items:
+      - "{{ bastion_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+    ignore_errors: True
