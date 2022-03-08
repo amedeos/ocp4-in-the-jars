@@ -55,8 +55,8 @@ bootstrap_memory: 16384
 bootstrap_cpu: 4
 master_memory: 16384
 master_cpu: 4
-worker_memory: 16384
-worker_cpu: 4
+worker_memory: 24576
+worker_cpu: 8
 image_dir: /var/lib/libvirt/images
 image_dir_bastion: /var/lib/libvirt/imagesssd
 image: rhel-8.5-x86_64-kvm.qcow2
