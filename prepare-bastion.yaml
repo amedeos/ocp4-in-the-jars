@@ -193,7 +193,7 @@
 
   - name: Set repository for the bastion
     shell: |
-      subscription-manager repos --disable='*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms 
+      subscription-manager repos --disable='*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms --enable=rh-odf-4-for-rhel-8-x86_64-rpms
 
   - name: Clean yum cache
     command: yum clean all
@@ -244,6 +244,7 @@
         - tree
         - redhat-lsb-core
         - ipmitool
+        - mcg
 
   - name: Create User Stack
     user:
