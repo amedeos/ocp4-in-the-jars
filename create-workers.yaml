@@ -31,10 +31,9 @@
       - item.state == "present"
     with_items: "{{ worker_nodes }}"
 
-  - name: Create two 200 GB OSD disks
+  - name: Create one 400 GB OSD disks
     shell: |
-      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2 200G
-      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}-osd-2.qcow2 200G
+      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2 400G
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     when:
