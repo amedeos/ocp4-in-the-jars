@@ -44,6 +44,27 @@
       - item.hypervisor_name != "localhost"
       - item.state == "present"
 
+- name: Shutdown all nodes
+  hosts:
+    - bastion
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  ignore_errors: True
+  ignore_unreachable: True
+  gather_facts: False
+  tasks:
+  - name: Shutdown host
+    shell: |
+      export KUBECONFIG=/home/kni/ocp4-lab/auth/kubeconfig
+      for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do oc debug node/${node} -- chroot /host echo pippo ; done
+      for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do oc debug node/${node} -- chroot /host shutdown -h 4 ; done
+    ignore_errors: True
+
+  - name: pause 10 min for shutdown
+    pause:
+      minutes: 10
+
 - name: Shutdown bastion and utility
   hosts:
     - bastion
