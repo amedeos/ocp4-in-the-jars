@@ -245,6 +245,7 @@
         - redhat-lsb-core
         - ipmitool
         - mcg
+        - nmap
 
   - name: Create User Stack
     user:
