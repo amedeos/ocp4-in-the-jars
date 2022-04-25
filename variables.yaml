@@ -62,7 +62,7 @@ image_dir_bastion: /var/lib/libvirt/imagesssd
 image: rhel-8.5-x86_64-kvm.qcow2
 image_location: http://192.168.1.70/images/rhel-8.5-x86_64-kvm.qcow2
 supported_os: rhel8
-ocpversion: stable-4.9
+ocpversion: stable-4.10
 pull_secret: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           34653331346331353934383534653433353339623134343930633330623835396531363031323037

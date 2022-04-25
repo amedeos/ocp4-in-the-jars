@@ -80,3 +80,6 @@
       - "{{ master_nodes }}"
       - "{{ worker_nodes }}"
     ignore_errors: True
+
+  #TODO: insert code for csr approving
+  # for c in $(oc get csr | egrep 'Pending$' | awk '{print $1}' ); do echo "Approving csr: ${c}"; oc adm certificate approve ${c} ; done
