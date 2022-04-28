@@ -7,7 +7,7 @@ options {
         memstatistics-file "/var/named/data/named_mem_stats.txt";
         secroots-file "/var/named/data/named.secroots";
         recursing-file "/var/named/data/named.recursing";
-        allow-query { localhost; 192.168.201.0/24; 192.168.203.0/24; };
+        allow-query { localhost; {{ provision_net.net }}/{{ provision_net.prefix }}; {{ baremetal_net.net }}/{{ baremetal_net.prefix }}; };
         recursion yes;
         dnssec-enable yes;
         dnssec-validation yes;
@@ -45,7 +45,7 @@ zone "{{ domain }}" {
          allow-update { none; };
 };
 
-zone "203.168.192.in-addr.arpa" IN {
+zone "{{ baremetal_net.reverse }}.in-addr.arpa" IN {
          type master;
          file "{{ domain }}.reverse.db";
          allow-update { none; };

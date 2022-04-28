@@ -9,7 +9,10 @@
             "hypervisor_image_dir": "/var/lib/libvirt/images",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.114",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.50",
+            "provisioning_ip": "192.168.203.50",
+            "baremetal_last": "50"
         }
      ],
     "utility_nodes": [
@@ -22,7 +25,9 @@
             "hypervisor_image_dir": "/var/lib/libvirt/images",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.115",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.254",
+            "provisioning_ip": "192.168.203.254"
         }
      ],
     "master_nodes": [
@@ -34,11 +39,13 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
-            "prov_mac": "52:54:00:00:32:00",
-            "bm_mac": "52:54:00:00:33:00",
+            "provisioning_mac": "52:54:00:00:32:00",
+            "baremetal_mac": "52:54:00:00:33:00",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.102",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.53",
+            "baremetal_last": "53"
         },
         {
             "name": "master-1",
@@ -48,11 +55,13 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
-            "prov_mac": "52:54:00:00:32:01",
-            "bm_mac": "52:54:00:00:33:01",
+            "provisioning_mac": "52:54:00:00:32:01",
+            "baremetal_mac": "52:54:00:00:33:01",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.103",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.54",
+            "baremetal_last": "54"
         },
         {
             "name": "master-2",
@@ -62,11 +71,13 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
-            "prov_mac": "52:54:00:00:32:02",
-            "bm_mac": "52:54:00:00:33:02",
+            "provisioning_mac": "52:54:00:00:32:02",
+            "baremetal_mac": "52:54:00:00:33:02",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.104",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.55",
+            "baremetal_last": "55"
         }
     ],
     "worker_nodes": [
@@ -79,11 +90,13 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/imagesssd",
-            "prov_mac": "52:54:00:00:32:03",
-            "bm_mac": "52:54:00:00:33:03",
+            "provisioning_mac": "52:54:00:00:32:03",
+            "baremetal_mac": "52:54:00:00:33:03",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.13",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.56",
+            "baremetal_last": "56"
         },
         {
             "name": "worker-1",
@@ -94,11 +107,13 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/imagesssd",
-            "prov_mac": "52:54:00:00:32:04",
-            "bm_mac": "52:54:00:00:33:04",
+            "provisioning_mac": "52:54:00:00:32:04",
+            "baremetal_mac": "52:54:00:00:33:04",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.14",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.57",
+            "baremetal_last": "57"
         },
         {
             "name": "worker-2",
@@ -109,11 +124,13 @@
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
-            "prov_mac": "52:54:00:00:32:05",
-            "bm_mac": "52:54:00:00:33:05",
+            "provisioning_mac": "52:54:00:00:32:05",
+            "baremetal_mac": "52:54:00:00:33:05",
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.117",
-            "vbmc_port": "623"
+            "vbmc_port": "623",
+            "baremetal_ip": "192.168.203.58",
+            "baremetal_last": "58"
         }
     ]
 }

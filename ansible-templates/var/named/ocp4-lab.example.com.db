@@ -7,23 +7,33 @@ $TTL  1D
                 3h         ; minimum
               )
                           IN NS dns.{{ domain }}.
-dns                       IN A 192.168.203.254
-utility                   IN A 192.168.203.254
-api                       IN A 192.168.203.80
-api-int                   IN A 192.168.203.80
-*.apps                    IN A 192.168.203.81
-bastion                   IN A 192.168.203.50
-bootstrap                 IN A 192.168.203.51
-provisioner               IN A 192.168.203.52
-master-0                  IN A 192.168.203.53
-master-1                  IN A 192.168.203.54
-master-2                  IN A 192.168.203.55
-worker-0                  IN A 192.168.203.56
-worker-1                  IN A 192.168.203.57
-worker-2                  IN A 192.168.203.58
-openshift-master-0        IN A 192.168.203.59
-openshift-master-1        IN A 192.168.203.60
-openshift-master-2        IN A 192.168.203.61
-openshift-worker-0        IN A 192.168.203.62
-openshift-worker-1        IN A 192.168.203.63
-openshift-worker-2        IN A 192.168.203.64
+{% for host in utility_nodes %}
+{% if host != 'localhost' %}
+dns                       IN A {{ host.baremetal_ip }}
+{{ host.name }}           IN A {{ host.baremetal_ip }}
+{% endif %}
+{% endfor %}
+api                       IN A {{ vip.api }}
+api-int                   IN A {{ vip.apiint }}
+*.apps                    IN A {{ vip.apps }}
+; bastion nodes
+{% for host in bastion_nodes %}
+{% if host != 'localhost' %}
+{{ host.name }}           IN A {{ host.baremetal_ip }}
+{% endif %}
+{% endfor %}
+
+; master nodes
+{% for host in master_nodes %}
+{% if host != 'localhost' %}
+{{ host.name }}           IN A {{ host.baremetal_ip }}
+{% endif %}
+{% endfor %}
+
+; worker nodes
+{% for host in worker_nodes %}
+{% if host != 'localhost' %}
+{{ host.name }}           IN A {{ host.baremetal_ip }}
+{% endif %}
+{% endfor %}
+

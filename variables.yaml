@@ -33,6 +33,21 @@ rh_subcription_pool: !vault |
           30383166613936373932623539396266303938383239633665373131393236663461313661626336
           3536363433393464653238323938663230363861316137636661
 dns_ip_utility: 172.20.0.10
+provision_net:
+  net: 192.168.201.0
+  netmask: 255.255.255.0
+  prefix: 24
+baremetal_net:
+  net: 192.168.203.0
+  netmask: 255.255.255.0
+  prefix: 24
+  reverse: 203.168.192
+vip:
+  api: 192.168.203.80
+  apiint: 192.168.203.80
+  apps: 192.168.203.81
+  apilast: 80
+  apiintlast: 80
 utility_n: utility
 utility_prov_ip: 192.168.201.254
 utility_prov_netmask: 255.255.255.0

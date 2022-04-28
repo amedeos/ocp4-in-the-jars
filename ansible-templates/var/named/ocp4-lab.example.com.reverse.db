@@ -7,20 +7,33 @@ $TTL  1D
                 3h         ; minimum
               )
           IN NS dns.{{ domain }}.
-80        IN PTR api.{{ domain }}.
-80        IN PTR api-int.{{ domain }}.
-50        IN PTR bastion.{{ domain }}.
-51        IN PTR bootstrap.{{ domain }}.
-52        IN PTR provisioner.{{ domain }}.
-53        IN PTR master-0.{{ domain }}.
-54        IN PTR master-1.{{ domain }}.
-55        IN PTR master-2.{{ domain }}.
+
+
+{{ vip.apilast }}        IN PTR api.{{ domain }}.
+{{ vip.apiintlast }}        IN PTR api-int.{{ domain }}.
+
+; bastion nodes
+{% for host in bastion_nodes %}
+{% if host != 'localhost' %}
+{{ host.baremetal_last }}           IN PTR {{ host.name }}.{{ domain }}.
+{% endif %}
+{% endfor %}
+
+; master nodes
+{% for host in master_nodes %}
+{% if host != 'localhost' %}
+{{ host.baremetal_last }}           IN PTR {{ host.name }}.{{ domain }}.
+{% endif %}
+{% endfor %}
+
+; worker nodes
+{% for host in worker_nodes %}
+{% if host != 'localhost' %}
+{{ host.baremetal_last }}           IN PTR {{ host.name }}.{{ domain }}.
+{% endif %}
+{% endfor %}
+
+
 56        IN PTR worker-0.{{ domain }}.
 57        IN PTR worker-1.{{ domain }}.
 58        IN PTR worker-2.{{ domain }}.
-59        IN PTR openshift-master-0.{{ domain }}.
-60        IN PTR openshift-master-1.{{ domain }}.
-61        IN PTR openshift-master-2.{{ domain }}.
-62        IN PTR openshift-worker-0.{{ domain }}.
-63        IN PTR openshift-worker-1.{{ domain }}.
-64        IN PTR openshift-worker-2.{{ domain }}.
