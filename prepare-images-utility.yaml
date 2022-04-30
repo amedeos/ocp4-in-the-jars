@@ -87,8 +87,8 @@
       content: |
         DEVICE=eth0
         ONBOOT=yes
-        IPADDR={{ utility_prov_ip }}
-        NETMASK={{ utility_prov_netmask }}
+        IPADDR={{ utility_nodes[0].provisioning_ip }}
+        NETMASK={{ provision_net.netmask }}
         DEFROUTE=no
         NM_CONTROLLED=yes
         DNS1={{ dns_ip_utility }}
@@ -103,9 +103,9 @@
       content: |
         DEVICE=eth1
         TYPE=Ethernet
-        IPADDR={{ utility_bm_ip }}
-        GATEWAY={{ utility_bm_gw }}
-        NETMASK={{ utility_bm_netmask }}
+        IPADDR={{ utility_nodes[0].baremetal_ip }}
+        GATEWAY={{ baremetal_net.gateway }}
+        NETMASK={{ baremetal_net.netmask }}
         ONBOOT=yes
         NM_CONTROLLED=yes
     delegate_to: "{{ item.hypervisor_name }}"

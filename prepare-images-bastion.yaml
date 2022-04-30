@@ -87,11 +87,11 @@
       content: |
         DEVICE=eth0
         ONBOOT=yes
-        IPADDR={{ bastion_prov_ip }}
-        NETMASK={{ bastion_prov_netmask }}
+        IPADDR={{ bastion_nodes[0].provisioning_ip }}
+        NETMASK={{ provision_net.netmask }}
         DEFROUTE=no
         NM_CONTROLLED=yes
-        DNS1={{ dns_ip_bastion }}
+        DNS1={{ utility_nodes[0].provisioning_ip }}
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
@@ -103,9 +103,9 @@
       content: |
         DEVICE=eth1
         TYPE=Ethernet
-        IPADDR={{ bastion_bm_ip }}
-        GATEWAY={{ bastion_bm_gw }}
-        NETMASK={{ bastion_bm_netmask }}
+        IPADDR={{ bastion_nodes[0].baremetal_ip }}
+        GATEWAY={{ baremetal_net.gateway }}
+        NETMASK={{ baremetal_net.netmask }}
         ONBOOT=yes
         NM_CONTROLLED=yes
     delegate_to: "{{ item.hypervisor_name }}"
