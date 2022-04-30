@@ -246,6 +246,7 @@
         - ipmitool
         - mcg
         - nmap
+        - ansible
 
   - name: Create User Stack
     user:

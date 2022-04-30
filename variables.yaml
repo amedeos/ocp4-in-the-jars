@@ -42,6 +42,10 @@ baremetal_net:
   netmask: 255.255.255.0
   prefix: 24
   reverse: 203.168.192
+  gateway: 192.168.203.1
+  ntp: "103.16.182.23,103.16.182.214"
+  dhcp_start: 192.168.203.90
+  dhcp_end: 192.168.203.110
 vip:
   api: 192.168.203.80
   apiint: 192.168.203.80
