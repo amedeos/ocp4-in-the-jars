@@ -59,12 +59,6 @@ utility:
   cpu: 2
   memory: 2048
   disk: 100G
-#utility_n: utility
-#utility_prov_ip: 192.168.201.254
-#utility_prov_netmask: 255.255.255.0
-#utility_bm_ip: 192.168.203.254
-#utility_bm_netmask: 255.255.255.0
-#utility_bm_gw: 192.168.203.1
 bastion:
   cpu: 6
   memory: 24576
@@ -78,26 +72,9 @@ worker:
   memory: 32768
   disk: 150G
   osd_disk: 400G
-#bastion_n: bastion
-#bastion_prov_ip: 192.168.201.50
-#bastion_prov_netmask: 255.255.255.0
-#bastion_bm_ip: 192.168.203.50
-#bastion_bm_netmask: 255.255.255.0
-#bastion_bm_gw: 192.168.203.1
-#dns_ip_bastion: "{{ utility_prov_ip }}"
 cluster_name: ocp4-lab
 domain: ocp4-lab.example.com
 base_domain: example.com
-#bastion_memory: 24576
-#bastion_cpu: 6
-#utility_memory: 2048
-#utility_cpu: 2
-#bootstrap_memory: 16384
-#bootstrap_cpu: 4
-#master_memory: 16384
-#master_cpu: 4
-#worker_memory: 32768
-#worker_cpu: 8
 # used on cleanup
 image_dir: /var/lib/libvirt/images
 image_dir_bastion: /var/lib/libvirt/imagesssd
