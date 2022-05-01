@@ -177,7 +177,7 @@
       export RHCOS_QEMU_PATH=$(/usr/bin/openshift-baremetal-install coreos print-stream-json | jq -r --arg ARCH "$(arch)" '.architectures[$ARCH].artifacts.qemu.formats["qcow2.gz"].disk["sha256"]')
       export RHCOS_QEMU_UNCOMPRESSED_SHA256=$(/usr/bin/openshift-baremetal-install coreos print-stream-json | jq -r --arg ARCH "$(arch)" '.architectures[$ARCH].artifacts.qemu.formats["qcow2.gz"].disk["uncompressed-sha256"]')
 
-      curl -C -L ${RHCOS_QEMU_URI} -o /home/kni/rhcos_image_cache/${RHCOS_QEMU_PATH}
+      curl -C - -L ${RHCOS_QEMU_URI} -o /home/kni/rhcos_image_cache/${RHCOS_QEMU_PATH}
 
       export BAREMETAL_IP=$(ip addr show dev baremetal | awk '/inet /{print $2}' | cut -d"/" -f1)
       export BOOTSTRAP_OS_IMAGE="http://${BAREMETAL_IP}:8080/${RHCOS_QEMU_PATH}?sha256=${RHCOS_QEMU_UNCOMPRESSED_SHA256}"
@@ -264,3 +264,8 @@
       owner: kni
       group: kni
       mode: 0664
+
+  - name: Restart image cache container
+    shell: |
+      podman stop rhcos_image_cache
+      podman start rhcos_image_cache
