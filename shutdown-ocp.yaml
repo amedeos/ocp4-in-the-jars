@@ -6,7 +6,7 @@
   tasks:
   - name: Add bastion group-host
     add_host:
-      name: "{{ bastion_n }}.{{ domain }}"
+      name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
       ansible_ssh_user: kni
       ansible_become: True
@@ -18,7 +18,7 @@
 
   - name: Add utility group-host
     add_host:
-      name: "{{ utility_n }}.{{ domain }}"
+      name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
       ansible_ssh_user: kni
       ansible_become: True
