@@ -1,0 +1,56 @@
+- name:  Add hypervisor host in inventory
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    when:
+      - item.state == "present"
+    with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+- name:  Add Bastion VM/Node
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add bastion group-host
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+
+- name: Install OpenShift
+  hosts: bastion
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Run create cluster
+    shell: |
+      openshift-baremetal-install --dir /home/kni/ocp4-lab --log-level debug create cluster
+    register: create_cluster
+    ignore_errors: True
+
+  - name: Re-run installation
+    shell: |
+      openshift-baremetal-install --dir /home/kni/ocp4-lab --log-level debug wait-for install-complete
+    register: install_complete
+    until: install_complete.rc == 0
+    delay: 30
+    retries: 2
+    when: not create_cluster.rc == 0
+

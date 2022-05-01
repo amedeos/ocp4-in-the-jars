@@ -21,3 +21,7 @@
 - import_playbook: configure-bastion.yaml
   tags:
     - configure-bastion
+
+- import_playbook: install-ocp.yaml
+  tags:
+    - install-ocp
