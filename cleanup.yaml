@@ -6,7 +6,7 @@
   tasks:
   - name: Add bastion group-host for cleanup
     add_host:
-      name: "{{ bastion_n }}.{{ domain }}"
+      name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
       ansible_ssh_user: kni
       ansible_become: True
@@ -18,7 +18,7 @@
 
   - name: Add utility group-host for cleanup
     add_host:
-      name: "{{ utility_n }}.{{ domain }}"
+      name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
       ansible_ssh_user: kni
       ansible_become: True
@@ -180,7 +180,7 @@
       state: absent
     with_nested:
       - [ '/root/.ssh/known_hosts']
-      - [ '{{ bastion_n }}', '{{ bastion_n }}.{{ domain }}' ]
+      - [ 'bastion', 'bastion.{{ domain }}' ]
 
   - name: Remove ssh known hosts - utility
     known_hosts:
@@ -189,7 +189,7 @@
       state: absent
     with_nested:
       - [ '/root/.ssh/known_hosts']
-      - [ '{{ utility_n }}', '{{ utility_n }}.{{ domain }}' ]
+      - [ 'utility', 'utility.{{ domain }}' ]
 
   - name: Remove files and directories
     file:
@@ -223,7 +223,7 @@
       backup: True
       state: absent
       block: |
-        Host {{ bastion_n }}.{{ domain }}
+        Host {{ item.name }}.{{ domain }}
         IdentityFile ~/ansible-ssh/id_rsa
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -233,7 +233,7 @@
     lineinfile:
       path: /etc/hosts
       backup: True
-      regexp: "{{ bastion_prov_ip }}\t{{ bastion_n }}.{{ domain }}\t{{ bastion_n }}"
+      regexp: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
       state: absent
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -245,7 +245,7 @@
       backup: True
       state: absent
       block: |
-        Host {{ utility_n }}.{{ domain }}
+        Host {{ item.name }}.{{ domain }}
         IdentityFile ~/ansible-ssh/id_rsa
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -255,7 +255,7 @@
     lineinfile:
       path: /etc/hosts
       backup: True
-      regexp: "{{ utility_prov_ip }}\t{{ utility_n }}.{{ domain }}\t{{ utility_n }}"
+      regexp: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
       state: absent
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True

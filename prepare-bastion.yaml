@@ -33,7 +33,7 @@
 
   - name: Defining the bastion vm
     shell: |
-      virt-install --ram {{ bastion_memory }} --vcpus {{ bastion_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/bastion.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ bastion.memory }} --vcpus {{ bastion.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/bastion.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -59,7 +59,7 @@
   - name: Sleeping till ssh on bastion vm is up
     wait_for:
       port: 22
-      host: "{{ bastion_prov_ip }}"
+      host: "{{ item.provisioning_ip }}"
       delay: 20
       timeout: 300
     delegate_to: "{{ item.hypervisor_name }}"
@@ -103,8 +103,8 @@
     lineinfile:
       path: /etc/hosts
       backup: True
-      regexp: "{{ bastion_n }}.{{ domain }}"
-      line: "{{ bastion_prov_ip }}\t{{ bastion_n }}.{{ domain }}\t{{ bastion_n }}"
+      regexp: "{{ item.name }}.{{ domain }}"
+      line: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
       state: present
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -134,7 +134,7 @@
       backup: True
       state: present
       block: |
-        Host {{ bastion_n }}.{{ domain }}
+        Host {{ item.name }}.{{ domain }}
         IdentityFile ~/ansible-ssh/id_rsa
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -142,7 +142,7 @@
 
   - name: Add bastion group-host
     add_host:
-      name: "{{ bastion_n }}.{{ domain }}"
+      name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
       ansible_ssh_pass: "{{ secure_password }}"
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
@@ -155,7 +155,7 @@
       dest: hosts-bastion-root
       content: |
         [bastion]
-        {{ bastion_n }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ bastion_nodes }}"
 
   - name: Write commodity hosts-bastion-kni file
@@ -163,7 +163,7 @@
       dest: hosts-bastion-kni
       content: |
         [bastion]
-        {{ bastion_n }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+        {{ item.name }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ bastion_nodes }}"
 
 - name:  Prepare Bastion Node

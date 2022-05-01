@@ -33,14 +33,14 @@
     run_once: True
     with_items: "{{ bastion_nodes }}"
 
-  - name: Create a new 100GB Blank Image
+  - name: Create a new Blank Image
     shell: |
-      qemu-img create -f qcow2  {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2 100G
+      qemu-img create -f qcow2  {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2 {{ bastion.disk }}
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
 
-  - name: Resizing the filesystem to 100G
+  - name: Resizing the filesystem
     shell: |
       virt-resize --format qcow2 --expand /dev/sda3 {{ item.hypervisor_image_dir }}/{{ supported_os }}.qcow2 {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2
     environment:

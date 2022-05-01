@@ -1,10 +1,10 @@
 apiVersion: v1
-baseDomain: example.com
+baseDomain: {{ base_domain }}
 metadata:
-  name: ocp4-lab
+  name: {{ cluster_name }}
 networking:
   machineNetwork:
-  - cidr: 192.168.203.0/24
+  - cidr: {{ baremetal_net.net }}/{{ baremetal_net.prefix }}
   networkType: OpenShiftSDN
 compute:
 - name: worker
@@ -16,80 +16,44 @@ controlPlane:
     baremetal: {}
 platform:
   baremetal:
-    apiVIP: 192.168.203.80
-    ingressVIP: 192.168.203.81
+    apiVIP: {{ vip.api }}
+    ingressVIP: {{ vip.apps }}
     bootstrapOSImage: BOOTSTRAPOSIMAGE
-    provisioningNetworkCIDR: 192.168.201.0/24
-    provisioningNetworkInterface: enp1s0
+    provisioningNetworkCIDR: {{ provision_net.net }}/{{ provision_net.prefix }}
+    provisioningNetworkInterface: {{ provision_net.net_interface }}
     provisioningBridge: "provisioning"
-    provisioningDHCPRange: 192.168.201.140,192.168.201.160
+    provisioningDHCPRange: {{ provision_net.dhcp_start }},{{ provision_net.dhcp_end }}
     provisioningNetwork: Managed
-    bootstrapProvisioningIP: 192.168.201.51
+    #bootstrapProvisioningIP: 192.168.201.51
     externalBridge: "baremetal"
     hosts:
-      - name: master-0
+{% for host in master_nodes %}
+{% if host != 'localhost' %}
+      - name: {{ host.name }}
         role: master
         bmc:
-          address: ipmi://192.168.201.102
+          address: ipmi://{{ host.vbmc_ip }}:{{ host.vbmc_port }}
           username: admin
-          password: redhat
-        bootMACAddress: 52:54:00:00:32:00
+          password: {{ secure_password }}
+        bootMACAddress: {{ host.provisioning_mac }}
         rootDeviceHints:
          deviceName: "/dev/vda"
         bootMode: legacy
         #hardwareProfile: default
-      - name: master-1
-        role: master
-        bmc:
-          address: ipmi://192.168.201.103
-          username: admin
-          password: redhat
-        bootMACAddress: 52:54:00:00:32:01
-        rootDeviceHints:
-         deviceName: "/dev/vda"
-        bootMode: legacy
-        #hardwareProfile: default
-      - name: master-2
-        role: master
-        bmc:
-          address: ipmi://192.168.201.104
-          username: admin
-          password: redhat
-        bootMACAddress: 52:54:00:00:32:02
-        rootDeviceHints:
-         deviceName: "/dev/vda"
-        bootMode: legacy
-        #hardwareProfile: default
-      - name: worker-0
+{% endif %}
+{% endfor %}
+{% for host in worker_nodes %}
+{% if host != 'localhost' %}
+      - name: {{ host.name }}
         role: worker
         bmc:
-          address: ipmi://192.168.201.13
+          address: ipmi://{{ host.vbmc_ip }}:{{ host.vbmc_port }}
           username: admin
-          password: redhat
-        bootMACAddress: 52:54:00:00:32:03
+          password: {{ secure_password }}
+        bootMACAddress: {{ host.provisioning_mac }}
         rootDeviceHints:
          deviceName: "/dev/vda"
         bootMode: legacy
         #hardwareProfile: default
-      - name: worker-1
-        role: worker
-        bmc:
-          address: ipmi://192.168.201.14
-          username: admin
-          password: redhat
-        bootMACAddress: 52:54:00:00:32:04
-        rootDeviceHints:
-         deviceName: "/dev/vda"
-        bootMode: legacy
-        #hardwareProfile: default
-      - name: worker-2
-        role: worker
-        bmc:
-          address: ipmi://192.168.201.117
-          username: admin
-          password: redhat
-        bootMACAddress: 52:54:00:00:32:05
-        rootDeviceHints:
-         deviceName: "/dev/vda"
-        bootMode: legacy
-      #  hardwareProfile: default
+{% endif %}
+{% endfor %}

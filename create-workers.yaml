@@ -22,18 +22,18 @@
     - variables.yaml
     - bm-ansible-nodes.json
   tasks:
-  - name: Create 100GB Image for each worker
+  - name: Create Image for each worker
     shell: |
-      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2 150G
+      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2 {{ worker.disk }}
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     when:
       - item.state == "present"
     with_items: "{{ worker_nodes }}"
 
-  - name: Create one 400 GB OSD disks
+  - name: Create one OSD disk
     shell: |
-      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2 400G
+      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2 {{ worker.osd_disk }}
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     when:
@@ -43,7 +43,7 @@
 
   - name: Defining the workers
     shell: |
-      virt-install --ram {{ worker_memory }} --vcpus {{ worker_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ worker.memory }} --vcpus {{ worker.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -54,7 +54,7 @@
   
   - name: Defining the ODF workers
     shell: |
-      virt-install --ram {{ worker_memory }} --vcpus {{ worker_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ worker.memory }} --vcpus {{ worker.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True

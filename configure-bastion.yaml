@@ -24,7 +24,7 @@
   tasks:
   - name: Add bastion group-host
     add_host:
-      name: "{{ bastion_n }}.{{ domain }}"
+      name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
       ansible_ssh_user: kni
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
@@ -216,6 +216,7 @@
     template:
       src: ansible-templates/home/kni/install-config.yaml
       dest: /home/kni/install-config.yaml
+      backup: True
       owner: kni
       group: kni
 

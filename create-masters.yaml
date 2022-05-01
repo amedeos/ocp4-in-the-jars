@@ -22,16 +22,16 @@
     - variables.yaml
     - bm-ansible-nodes.json
   tasks:
-  - name: Create 100GB Image for each master
+  - name: Create Image for each master
     shell: |
-      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2 150G
+      qemu-img create -f qcow2 -o preallocation=metadata {{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2 {{ master.disk }}
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ master_nodes }}"
 
   - name: Defining the Overcloud masters
     shell: |
-      virt-install --ram {{ master_memory }} --vcpus {{ master_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True

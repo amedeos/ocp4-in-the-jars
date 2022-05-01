@@ -33,7 +33,7 @@
 
   - name: Defining the utility vm
     shell: |
-      virt-install --ram {{ utility_memory }} --vcpus {{ utility_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ utility.memory }} --vcpus {{ utility.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -59,7 +59,7 @@
   - name: Sleeping till ssh on utility vm is up
     wait_for:
       port: 22
-      host: "{{ utility_prov_ip }}"
+      host: "{{ item.provisioning_ip }}"
       delay: 20
       timeout: 300
     delegate_to: "{{ item.hypervisor_name }}"
@@ -103,8 +103,8 @@
     lineinfile:
       path: /etc/hosts
       backup: True
-      regexp: "{{ utility_n }}.{{ domain }}"
-      line: "{{ utility_prov_ip }}\t{{ utility_n }}.{{ domain }}\t{{ utility_n }}"
+      regexp: "{{ item.name }}.{{ domain }}"
+      line: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
       state: present
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -134,7 +134,7 @@
       backup: True
       state: present
       block: |
-        Host {{ utility_n }}.{{ domain }}
+        Host {{ item.name }}.{{ domain }}
         IdentityFile ~/ansible-ssh/id_rsa
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -142,7 +142,7 @@
 
   - name: Add utility group-host
     add_host:
-      name: "{{ utility_n }}.{{ domain }}"
+      name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
       ansible_ssh_pass: "{{ secure_password }}"
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
@@ -155,7 +155,7 @@
       dest: hosts-utility-root
       content: |
         [utility]
-        {{ utility_n }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ utility_nodes }}"
 
   - name: Write commodity hosts-utility-kni file
@@ -163,7 +163,7 @@
       dest: hosts-utility-kni
       content: |
         [utility]
-        {{ utility_n }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+        {{ item.name }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ utility_nodes }}"
 
 - name:  Prepare Utility Node
