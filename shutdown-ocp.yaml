@@ -2,6 +2,7 @@
   hosts: localhost
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Add bastion group-host
@@ -49,6 +50,7 @@
     - bastion
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   ignore_errors: True
   ignore_unreachable: True
@@ -71,6 +73,7 @@
     - utility
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   ignore_errors: True
   ignore_unreachable: True
@@ -87,6 +90,7 @@
     - hypervisor_host
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Sleep 10 seconds

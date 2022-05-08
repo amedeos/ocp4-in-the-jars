@@ -2,6 +2,7 @@
   hosts: localhost
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Add all hypervisor group-host
@@ -20,6 +21,7 @@
     - hypervisor_host
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Copying RHEL-8 Image from web to images dir
@@ -69,6 +71,7 @@
     - hypervisor_host
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Copy Base Image to create bastion host image

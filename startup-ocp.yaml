@@ -2,6 +2,7 @@
   hosts: localhost
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Add bastion group-host
@@ -50,6 +51,7 @@
     - hypervisor_host
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Start utility

@@ -2,6 +2,7 @@
   hosts: localhost
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Add all hypervisor group-host
@@ -20,6 +21,7 @@
     - hypervisor_host
   vars_files:
     - variables.yaml
+    - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
   - name: Create Image for each worker
