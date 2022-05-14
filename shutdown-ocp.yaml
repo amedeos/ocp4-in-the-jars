@@ -5,7 +5,7 @@
     - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
-  - name: Add bastion group-host
+  - name: Add bastion group-host - no localhost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
@@ -16,8 +16,22 @@
         - bastion
     with_items:
       - "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
 
-  - name: Add utility group-host
+  - name: Add bastion group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+  - name: Add utility group-host - no localhost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
@@ -28,6 +42,20 @@
         - utility
     with_items:
       - "{{ utility_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Add utility group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - utility
+    with_items:
+      - "{{ utility_nodes }}"
+    when: item.hypervisor_name == "localhost"
 
   - name: Add all hypervisor group-host
     add_host:
@@ -60,12 +88,12 @@
     shell: |
       export KUBECONFIG=/home/kni/ocp4-lab/auth/kubeconfig
       for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do oc debug node/${node} -- chroot /host echo pippo ; done
-      for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do oc debug node/${node} -- chroot /host shutdown -h 4 ; done
+      for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do oc debug node/${node} -- chroot /host shutdown -h 3 ; done
     ignore_errors: True
 
-  - name: pause 10 min for shutdown
+  - name: pause 6 min for shutdown
     pause:
-      minutes: 10
+      minutes: 6
 
 - name: Shutdown bastion and utility
   hosts:
