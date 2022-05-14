@@ -142,7 +142,7 @@
     run_once: True
     with_items: "{{ bastion_nodes }}"
 
-  - name: Add bastion group-host
+  - name: Add bastion group-host - no localhost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
@@ -151,22 +151,55 @@
       groups:
         - bastion
     with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
 
-  - name: Write commodity hosts-bastion-root file
+  - name: Add bastion group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_user: root
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - bastion
+    with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+  - name: Write commodity hosts-bastion-root file - no localhost
     copy:
       dest: hosts-bastion-root
       content: |
         [bastion]
         {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
 
-  - name: Write commodity hosts-bastion-kni file
+  - name: Write commodity hosts-bastion-root file - localhost
+    copy:
+      dest: hosts-bastion-root
+      content: |
+        [bastion]
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+    with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+  - name: Write commodity hosts-bastion-kni file - no locahost
     copy:
       dest: hosts-bastion-kni
       content: |
         [bastion]
         {{ item.name }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Write commodity hosts-bastion-kni file - locahost
+    copy:
+      dest: hosts-bastion-kni
+      content: |
+        [bastion]
+        {{ item.name }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+    with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
 
 - name:  Prepare Bastion Node
   hosts: bastion

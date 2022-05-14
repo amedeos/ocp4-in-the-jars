@@ -24,7 +24,7 @@
     - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
-  - name: Add bastion group-host
+  - name: Add bastion group-host - no localhost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
@@ -34,6 +34,19 @@
         - bastion
     with_items:
       - "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Add bastion group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
 
 - name:  Prepare Bastion Node
   hosts: bastion

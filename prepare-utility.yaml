@@ -142,7 +142,7 @@
     run_once: True
     with_items: "{{ utility_nodes }}"
 
-  - name: Add utility group-host
+  - name: Add utility group-host - no localhost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
@@ -151,22 +151,56 @@
       groups:
         - utility
     with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name != "localhost"
 
-  - name: Write commodity hosts-utility-root file
+  - name: Add utility group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_user: root
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - utility
+    with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+
+  - name: Write commodity hosts-utility-root file - no localhost
     copy:
       dest: hosts-utility-root
       content: |
         [utility]
         {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name != "localhost"
 
-  - name: Write commodity hosts-utility-kni file
+  - name: Write commodity hosts-utility-root file - localhost
+    copy:
+      dest: hosts-utility-root
+      content: |
+        [utility]
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+    with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+  - name: Write commodity hosts-utility-kni file - no localhost
     copy:
       dest: hosts-utility-kni
       content: |
         [utility]
         {{ item.name }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Write commodity hosts-utility-kni file - localhost
+    copy:
+      dest: hosts-utility-kni
+      content: |
+        [utility]
+        {{ item.name }}.{{ domain }} ansible_ssh_user=kni ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+    with_items: "{{ utility_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
 
 - name:  Prepare Utility Node
   hosts: utility
