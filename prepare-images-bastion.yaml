@@ -33,6 +33,22 @@
       group: root
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
+    register: image_get_url
+    ignore_errors: True
+    with_items: "{{ bastion_nodes }}"
+
+  - name: Copy RHEL-8 image
+    copy:
+      remote_src: True
+      src: "{{ image_location }}"
+      dest: "{{ item.hypervisor_image_dir }}/{{ supported_os }}.qcow2"
+      mode: '0660'
+      owner: root
+      group: root
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    when:
+      - image_get_url.failed is defined
     with_items: "{{ bastion_nodes }}"
 
   - name: Create a new Blank Image
@@ -50,6 +66,15 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
+    when: not ansible_os_family == "RedHat"
+
+  - name: Resizing the filesystem
+    shell: |
+      virt-resize --format qcow2 --expand /dev/sda3 {{ item.hypervisor_image_dir }}/{{ supported_os }}.qcow2 {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+    when: ansible_os_family == "RedHat"
 
   - name: Copy ssh_pub to temp dir
     copy:
@@ -64,6 +89,15 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
+    when: not ansible_os_family == "RedHat"
+
+  - name: Customizing the image to set root password, push ssh key and remove cloud-init
+    shell: |
+      virt-customize -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-100G.qcow2 --root-password password:"{{ secure_password }}" --ssh-inject "root:file:/tmp/id_rsa.pub" --selinux-relabel --run-command 'yum remove cloud-init* -y'
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+    when: ansible_os_family == "RedHat"
 
 - name:  Prepare bastion host Golden Image
   hosts:
@@ -123,3 +157,13 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
+    when: not ansible_os_family == "RedHat"
+
+  - name: Copying Config files to the rhel8 bastion image
+    shell: |
+      virt-copy-in -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-bastion.qcow2 /tmp/ifcfg-eth0 /tmp/ifcfg-eth1 /etc/sysconfig/network-scripts/
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+    when: ansible_os_family == "RedHat"
+
