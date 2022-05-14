@@ -9,6 +9,7 @@ provision_net:
   net_interface: enp1s0
   dhcp_start: 192.168.201.140
   dhcp_end: 192.168.201.160
+  bridge_prov_ip: 192.168.201.1
 baremetal_net:
   net: 192.168.203.0
   netmask: 255.255.255.0
@@ -41,6 +42,9 @@ worker:
   memory: 32768
   disk: 150G
   osd_disk: 400G
+kvmhost:
+  enable_selinux: True
+  reboot_timeout: 1200
 cluster_name: ocp4-lab
 domain: ocp4-lab.example.com
 base_domain: example.com

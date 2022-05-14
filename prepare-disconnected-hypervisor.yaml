@@ -1,0 +1,372 @@
+- name:  Prepare Hypervisor
+  hosts: kvmhost
+  vars_files:
+    - variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Upgrade to latest version
+    dnf:
+      name: "*"
+      state: latest
+
+  - name: Reboot after Upgrade
+    reboot:
+      reboot_timeout: "{{ kvmhost.reboot_timeout }}"
+
+  - name: Check selinux status
+    shell: |
+      sestatus | egrep '^Current mode:' | sed -E 's/^Current mode:\s+//g'
+    register: selinux_status
+    when:
+      - kvmhost.enable_selinux|bool
+
+  - name: Enable SELinux
+    selinux:
+      policy: targeted
+      state: enforcing
+    when:
+      - kvmhost.enable_selinux|bool
+
+  - name: Reboot in order to enable selinux
+    reboot:
+      reboot_timeout: "{{ kvmhost.reboot_timeout }}"
+    when:
+      - kvmhost.enable_selinux|bool
+      - not selinux_status.stdout == "enforcing"
+
+  - name: Setting Kernel parameters
+    copy:
+      dest: /etc/sysctl.d/99-kvmhost.conf
+      content: |
+        net.ipv4.ip_forward=1
+        net.ipv4.conf.default.rp_filter = 0
+        net.ipv4.conf.all.rp_filter = 0
+        net.ipv4.neigh.default.gc_thresh1 = 8192
+        net.ipv4.neigh.default.gc_thresh2 = 16384
+        net.ipv4.neigh.default.gc_thresh3 = 32768
+        net.ipv6.neigh.default.gc_thresh1 = 8192
+        net.ipv6.neigh.default.gc_thresh2 = 16384
+        net.ipv6.neigh.default.gc_thresh3 = 32768
+
+  - name: Getting rp_filter variables to set
+    shell: |
+      sysctl -A 2> /dev/null | grep "\.rp_filter"  | cut -d"=" -f1
+    register: sysctl_rp_filter
+
+  - name: Setting Systcl rp_filter variables dynamically
+    sysctl:
+      name: "{{ item }}"
+      value: '0'
+      sysctl_set: yes
+      state: present
+    ignore_errors: True
+    with_items:
+      - "{{ sysctl_rp_filter.stdout_lines }}"
+
+  - name: restart sysctl
+    systemd:
+      name: systemd-sysctl.service
+      state: restarted
+
+  - name: Create provisioning bridge
+    nmcli:
+      type: bridge
+      conn_name: "{{ bridge_prov }}"
+      ifname: "{{ bridge_prov }}"
+      ip4: "{{ provision_net.bridge_prov_ip }}/{{ provision_net.prefix }}"
+      stp: False
+      state: present
+
+  - name: Add vbmc_ip to provisioning bridge
+    shell: |
+      nmcli connection modify {{ bridge_prov }} +ipv4.addresses {{ item.vbmc_ip }}/{{ provision_net.prefix }}
+    with_items:
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ bastion_nodes }}"
+
+  - name: Create baremetal bridge
+    nmcli:
+      type: bridge
+      conn_name: "{{ bridge_bm }}"
+      ifname: "{{ bridge_bm }}"
+      ip4: "{{ baremetal_net.gateway }}/{{ baremetal_net.prefix }}"
+      stp: False
+      state: present
+
+  - name: enable virt module
+    shell: |
+      dnf module enable virt:rhel
+      dnf distro-sync -y
+
+  - name: Install some packages
+    dnf:
+      name:
+        - tmux
+        - nmap
+        - tcpdump
+        - bind-utils
+        - jq
+        - vim
+        - bash-completion
+        - git
+        - iptables-services
+        - NetworkManager-libnm
+        - python3-libsemanage
+        - policycoreutils-python-utils
+        - nm-connection-editor
+        - python3-policycoreutils
+        - pciutils
+        - libvirt
+        - qemu-kvm
+        - virt-manager
+        - virt-install
+        - libguestfs-tools
+        - libguestfs-xfs
+        - virt-viewer
+        - net-tools
+        - mlocate
+        - sshpass
+        - redhat-lsb-core
+        - podman
+        - ipmitool
+        - tree
+      state: present
+
+  - name: Install centos-release-ansible-29.noarch
+    shell: |
+      dnf install -y centos-release-ansible-29.noarch
+
+  - name: Install ansible
+    dnf:
+      name:
+        - ansible
+      state: present
+
+  - name: Install centos-release-openstack-yoga.noarch
+    shell: |
+      dnf install -y centos-release-openstack-yoga.noarch
+
+  - name: Instal virtualbmc
+    dnf:
+      name: python3-virtualbmc
+      state: present
+
+  - name: Enable virtualbmc service
+    systemd:
+      name: virtualbmc.service
+      state: started
+      enabled: True
+
+  - name: Remove centos-release-openstack-yoga.noarch
+    shell: |
+      dnf remove -y centos-release-openstack-yoga.noarch
+
+  - name: Clean dnf cache
+    shell: |
+      dnf clean all
+
+  - name: disable firewalld
+    systemd:
+      name: firewalld
+      state: stopped
+      enabled: False
+    ignore_errors: True
+
+  - name: iptables flush filter
+    iptables:
+      chain: "{{ item }}"
+      flush: yes
+    with_items:  [ 'INPUT', 'FORWARD', 'OUTPUT' ]
+
+  - name: iptables flush nat
+    iptables:
+      table: nat
+      chain: '{{ item }}'
+      flush: yes
+    with_items: [ 'INPUT', 'OUTPUT', 'PREROUTING', 'POSTROUTING' ]
+
+  - name: Allow related and established connections
+    iptables:
+      chain: INPUT
+      ctstate: ESTABLISHED,RELATED
+      jump: ACCEPT
+
+  - name: Allow new incoming SYN packets on TCP port 22 (SSH).
+    iptables:
+      chain: INPUT
+      protocol: tcp
+      destination_port: 22
+      ctstate: NEW
+      syn: match
+      jump: ACCEPT
+      comment: Accept new SSH connections.
+
+  - name: enable traffic from loopback
+    iptables:
+      chain: INPUT
+      in_interface: lo
+      jump: ACCEPT
+
+  - name: enable icmp
+    iptables:
+      chain: INPUT
+      protocol: icmp
+      jump: ACCEPT
+
+  - name: Allow ipmi traffic to vbmc_ip
+    iptables:
+      chain: INPUT
+      protocol: udp
+      destination: "{{ item.vbmc_ip }}"
+      destination_port: "{{ item.vbmc_port }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ bastion_nodes }}"
+
+  - name: Allow ipmi incoming traffic from provisioning network
+    iptables:
+      chain: INPUT
+      protocol: udp
+      source: "{{ provision_net.net }}/{{ provision_net.prefix }}"
+      destination_port: 623
+      jump: ACCEPT
+
+  - name: Set the last rule as REJECT for INPUT
+    iptables:
+      chain: INPUT
+      jump: REJECT
+
+  - name: enable source forward
+    iptables:
+      chain: FORWARD
+      source: "{{ item }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ provision_net.net }}/{{ provision_net.prefix }}"
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+
+  - name: enable destination forward
+    iptables:
+      chain: FORWARD
+      destination: "{{ item }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ provision_net.net }}/{{ provision_net.prefix }}"
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+
+  - name: enable MASQUERADING
+    iptables:
+      table: nat
+      chain: POSTROUTING
+      source: "{{ item }}"
+      jump: MASQUERADE
+    with_items:
+      - "{{ provision_net.net }}/{{ provision_net.prefix }}"
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+
+  - name: Set the last rule as REJECT for FORWARD
+    iptables:
+      chain: FORWARD
+      jump: REJECT
+
+  - name: save iptables configuration
+    shell: |
+      /usr/sbin/iptables-save > /etc/sysconfig/iptables
+
+  - name: iptables flush filter
+    iptables:
+      ip_version: ipv6
+      chain: "{{ item }}"
+      flush: yes
+    with_items:  [ 'INPUT', 'FORWARD', 'OUTPUT' ]
+
+  - name: iptables flush nat
+    iptables:
+      table: nat
+      ip_version: ipv6
+      chain: '{{ item }}'
+      flush: yes
+    with_items: [ 'INPUT', 'OUTPUT', 'PREROUTING', 'POSTROUTING' ]
+
+  - name: Allow related and established connections
+    iptables:
+      chain: INPUT
+      ip_version: ipv6
+      ctstate: ESTABLISHED,RELATED
+      jump: ACCEPT
+
+  - name: Allow new incoming SYN packets on TCP port 22 (SSH).
+    iptables:
+      ip_version: ipv6
+      chain: INPUT
+      protocol: tcp
+      destination_port: 22
+      ctstate: NEW
+      syn: match
+      jump: ACCEPT
+      comment: Accept new SSH connections.
+
+  - name: enable traffic from loopback
+    iptables:
+      ip_version: ipv6
+      chain: INPUT
+      in_interface: lo
+      jump: ACCEPT
+
+  - name: enable icmp
+    iptables:
+      ip_version: ipv6
+      chain: INPUT
+      protocol: icmp
+      jump: ACCEPT
+
+  - name: Set the last rule as REJECT for INPUT
+    iptables:
+      ip_version: ipv6
+      chain: INPUT
+      jump: REJECT
+
+  - name: Set the last rule as REJECT for FORWARD
+    iptables:
+      ip_version: ipv6
+      chain: FORWARD
+      jump: REJECT
+
+  - name: save ip6tables configuration
+    shell: |
+      /usr/sbin/ip6tables-save > /etc/sysconfig/ip6tables
+
+  - name: enable iptables services
+    systemd:
+      name: iptables
+      state: started
+      enabled: True
+
+  - name: enable ip6tables services
+    systemd:
+      name: ip6tables
+      state: started
+      enabled: True
+
+  - name: Restart Libvirtd Service
+    systemd:
+      state: restarted
+      name: libvirtd
+      enabled: yes
+
+  - name: clone repo
+    shell: |
+      cd /root
+      git clone https://github.com/amedeos/ocp4-in-the-jars
+    ignore_errors: True
+
+  - name: create images dir
+    file:
+      path: /root/images
+      state: directory
+
