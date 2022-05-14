@@ -51,7 +51,7 @@ base_domain: example.com
 # used on cleanup
 image_dir: /var/lib/libvirt/images
 image_dir_bastion: /var/lib/libvirt/imagesssd
-image: rhel-8.5-x86_64-kvm.qcow2
-image_location: http://192.168.1.70/images/rhel-8.5-x86_64-kvm.qcow2
+image: rhel-8.6-x86_64-kvm.qcow2
+image_location: http://192.168.1.70/images/rhel-8.6-x86_64-kvm.qcow2
 supported_os: rhel8
 ocpversion: stable-4.10
