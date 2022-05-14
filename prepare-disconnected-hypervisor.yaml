@@ -178,14 +178,42 @@
     iptables:
       chain: "{{ item }}"
       flush: yes
-    with_items:  [ 'INPUT', 'FORWARD', 'OUTPUT' ]
+    ignore_errors: True
+    with_items:
+      - 'INPUT'
+      - 'FORWARD'
+      - 'OUTPUT'
+      - 'LIBVIRT_INP'
+      - 'LIBVIRT_OUT'
+      - 'LIBVIRT_FWO'
+      - 'LIBVIRT_FWI'
+      - 'LIBVIRT_FWX'
 
   - name: iptables flush nat
     iptables:
       table: nat
       chain: '{{ item }}'
       flush: yes
-    with_items: [ 'INPUT', 'OUTPUT', 'PREROUTING', 'POSTROUTING' ]
+    ignore_errors: True
+    with_items:
+      - 'INPUT'
+      - 'OUTPUT'
+      - 'PREROUTING'
+      - 'POSTROUTING'
+      - 'LIBVIRT_PRT'
+
+  - name: iptables flush mangle
+    iptables:
+      table: mangle
+      chain: '{{ item }}'
+      flush: yes
+    ignore_errors: True
+    with_items:
+      - 'INPUT'
+      - 'OUTPUT'
+      - 'PREROUTING'
+      - 'POSTROUTING'
+      - 'LIBVIRT_PRT'
 
   - name: Allow related and established connections
     iptables:
@@ -268,6 +296,30 @@
     with_items:
       - "{{ provision_net.net }}/{{ provision_net.prefix }}"
       - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+
+  - name: enable port forwarding for port 443
+    iptables:
+      table: nat
+      chain: PREROUTING
+      in_interface: "{{ ansible_default_ipv4.interface }}"
+      protocol: tcp
+      to_destination: "{{ vip.apps }}:443"
+      destination_port: 443
+      jump: DNAT
+    when:
+      - kvmhost.enable_portfw|bool
+
+  - name: enable port forwarding for port 6443
+    iptables:
+      table: nat
+      chain: PREROUTING
+      in_interface: "{{ ansible_default_ipv4.interface }}"
+      protocol: tcp
+      to_destination: "{{ vip.api }}:6443"
+      destination_port: 6443
+      jump: DNAT
+    when:
+      - kvmhost.enable_portfw|bool
 
   - name: Set the last rule as REJECT for FORWARD
     iptables:
