@@ -363,10 +363,31 @@
     shell: |
       cd /root
       git clone https://github.com/amedeos/ocp4-in-the-jars
+      cd /root/ocp4-in-the-jars
+      git pull
     ignore_errors: True
 
   - name: create images dir
     file:
       path: /root/images
       state: directory
+
+  - name: Overwrite bm-ansible-nodes.json file
+    copy:
+      backup: True
+      src: bm-ansible-nodes-disconnected.json
+      dest: /root/ocp4-in-the-jars/bm-ansible-nodes.json
+
+  - name: Overwrite image_location
+    shell: |
+      IMAGE=$(egrep '^image:\s+' /root/ocp4-in-the-jars/variables.yaml | sed -E 's/^image:\s+//g')
+      sed -i -E "s@^image_location:\s+.*@image_location: /root/images/${IMAGE}@g" /root/ocp4-in-the-jars/variables.yaml
+
+  - name: Create vimrc file
+    template:
+      src: ansible-templates/home/kni/vimrc
+      dest: /root/.vimrc
+      owner: root
+      group: root
+      mode: 0664
 
