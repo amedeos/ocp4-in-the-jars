@@ -137,6 +137,9 @@
   - name: Install centos-release-ansible-29.noarch
     shell: |
       dnf install -y centos-release-ansible-29.noarch
+    when:
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
 
   - name: Install ansible
     dnf:
@@ -147,6 +150,16 @@
   - name: Install centos-release-openstack-yoga.noarch
     shell: |
       dnf install -y centos-release-openstack-yoga.noarch
+    when:
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
+
+  - name: Install rdo-release-yoga-1.el8.noarch.rpm
+    shell: |
+      dnf install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga/rdo-release-yoga-1.el8.noarch.rpm
+    when:
+      - ansible_distribution != "CentOS"
+      - ansible_os_family == "RedHat"
 
   - name: Instal virtualbmc
     dnf:
@@ -162,6 +175,16 @@
   - name: Remove centos-release-openstack-yoga.noarch
     shell: |
       dnf remove -y centos-release-openstack-yoga.noarch
+    when:
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
+
+  - name: Remove rdo-release
+    shell: |
+      dnf remove -y rdo-release
+    when:
+      - ansible_distribution != "CentOS"
+      - ansible_os_family == "RedHat"
 
   - name: Clean dnf cache
     shell: |
