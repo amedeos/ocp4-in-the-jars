@@ -466,3 +466,20 @@
       group: root
       mode: 0664
 
+  - name: Final messages
+    debug:
+      msg:
+        - "#####################################################################################"
+        - "# Please connect in ssh to your disconnected Hypervisor and run:                    #"
+        - "#                                                                                   #"
+        - "# cd /root/ocp4-in-the-jars                                                         #"
+        - "# ansible-playbook --ask-vault-pass main.yml                                        #"
+        - "#                                                                                   #"
+        - "# if you want to use OpenShift API and/or console outside your Hypervisor,          #"
+        - "# for example from your Linux box, add the following lines to your /etc/hosts file: #"
+        - "#                                                                                   #"
+        - "# {{ ansible_default_ipv4.address }} api.{{ domain }}                                           #"
+        - "# {{ ansible_default_ipv4.address }} oauth-openshift.apps.{{ domain }}                          #"
+        - "# {{ ansible_default_ipv4.address }} console-openshift-console.apps.{{ domain }}                #"
+        - "#                                                                                   #"
+        - "#####################################################################################"
