@@ -57,13 +57,14 @@
   tasks:
   - name: Run create cluster
     shell: |
-      openshift-baremetal-install --dir /home/kni/ocp4-lab --log-level debug create cluster
+      openshift-baremetal-install --dir /home/kni/{{ cluster_name }} --log-level debug create cluster
     register: create_cluster
     ignore_errors: True
 
+  # WA for slow internet connection
   - name: Re-run installation
     shell: |
-      openshift-baremetal-install --dir /home/kni/ocp4-lab --log-level debug wait-for install-complete
+      openshift-baremetal-install --dir /home/kni/{{ cluster_name }} --log-level debug wait-for install-complete
     register: install_complete
     until: install_complete.rc == 0
     delay: 30

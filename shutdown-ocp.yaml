@@ -86,7 +86,7 @@
   tasks:
   - name: Shutdown host
     shell: |
-      export KUBECONFIG=/home/kni/ocp4-lab/auth/kubeconfig
+      export KUBECONFIG=/home/kni/{{ cluster_name }}/auth/kubeconfig
       for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do oc debug node/${node} -- chroot /host echo pippo ; done
       for node in $(oc get nodes -o jsonpath='{.items[*].metadata.name}'); do oc debug node/${node} -- chroot /host shutdown -h 3 ; done
     ignore_errors: True

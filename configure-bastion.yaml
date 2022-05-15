@@ -255,12 +255,12 @@
 
   - name: Create clusterconfigs directory
     shell: |
-      rm -rf /home/kni/ocp4-lab
-      mkdir -p /home/kni/ocp4-lab/openshift
+      rm -rf /home/kni/{{ cluster_name }}
+      mkdir -p /home/kni/{{ cluster_name }}/openshift
 
   - name: Copy install-config.yaml to clusterconfigs directory
     shell: |
-      cp -f install-config.yaml /home/kni/ocp4-lab
+      cp -f install-config.yaml /home/kni/{{ cluster_name }}
 
   - name: Remove old bootstrap resources
     shell: |
