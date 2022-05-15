@@ -27,12 +27,26 @@
     when:
       - kvmhost.enable_selinux|bool
 
+  - name: Create autorelabel file
+    file:
+      path: /.autorelabel
+      state: touch
+    when:
+      - kvmhost.enable_selinux|bool
+      - not selinux_status.stdout == "enforcing"
+
   - name: Reboot in order to enable selinux
     reboot:
       reboot_timeout: "{{ kvmhost.reboot_timeout }}"
     when:
       - kvmhost.enable_selinux|bool
       - not selinux_status.stdout == "enforcing"
+
+  - name: Comment all rp_filter
+    shell: |
+      for f in /etc/sysctl.conf /etc/sysctl.d/*.conf ; do 
+        sed -i -E 's/^(net.*\.rp_filter.*)/#\1/g' ${f}
+      done
 
   - name: Setting Kernel parameters
     copy:
@@ -59,6 +73,7 @@
       value: '0'
       sysctl_set: yes
       state: present
+      sysctl_file: /etc/sysctl.d/99-kvmhost.conf
     ignore_errors: True
     with_items:
       - "{{ sysctl_rp_filter.stdout_lines }}"
@@ -487,8 +502,9 @@
     debug:
       msg:
         - "#####################################################################################"
-        - "# Please connect in ssh to your disconnected Hypervisor and run:                    #"
+        - "# Please connect in ssh to your Hypervisor and run:                                 #"
         - "#                                                                                   #"
+        - "# scp <rhel8image.qcow2> <yourhypervisor>:/root/images/                             #"
         - "# cd /root/ocp4-in-the-jars                                                         #"
         - "# ansible-playbook --ask-vault-pass main.yml                                        #"
         - "#                                                                                   #"
