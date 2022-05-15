@@ -458,6 +458,23 @@
       IMAGE=$(egrep '^image:\s+' /root/ocp4-in-the-jars/variables.yaml | sed -E 's/^image:\s+//g')
       sed -i -E "s@^image_location:\s+.*@image_location: /root/images/${IMAGE}@g" /root/ocp4-in-the-jars/variables.yaml
 
+  - name: Remove repo provided SSH key
+    file:
+      path: "{{ item }}"
+      state: absent
+    when:
+      - kvmhost.replace_ssh_key|bool
+    with_items:
+      - /root/ocp4-in-the-jars/files/.ssh/id_rsa
+      - /root/ocp4-in-the-jars/files/.ssh/id_rsa.pub
+
+  - name: Create SSH key
+    openssh_keypair:
+      path: /root/ocp4-in-the-jars/files/.ssh/id_rsa
+      type: rsa
+    when:
+      - kvmhost.replace_ssh_key|bool
+
   - name: Create vimrc file
     template:
       src: ansible-templates/home/kni/vimrc
