@@ -110,6 +110,24 @@
       stp: False
       state: present
 
+  - name: Create restart-br.sh
+    copy:
+      dest: /root/restart-br.sh
+      owner: root
+      group: root
+      mode: 0755
+      content: |
+        #!/usr/bin/env bash
+        #
+        nmcli connection down {{ bridge_bm }}
+        nmcli connection up {{ bridge_bm }}
+        nmcli connection down {{ bridge_prov }}
+        nmcli connection up {{ bridge_prov }}
+
+  - name: Set bridge down / up
+    shell: |
+      nohup /root/restart-br.sh
+
   - name: enable virt module
     shell: |
       dnf module enable virt:rhel
@@ -514,5 +532,6 @@
         - "# {{ ansible_default_ipv4.address }} api.{{ domain }}                                           #"
         - "# {{ ansible_default_ipv4.address }} oauth-openshift.apps.{{ domain }}                          #"
         - "# {{ ansible_default_ipv4.address }} console-openshift-console.apps.{{ domain }}                #"
+        - "# {{ ansible_default_ipv4.address }} noobaa-mgmt-openshift-storage.apps.{{ domain }}            #"
         - "#                                                                                   #"
         - "#####################################################################################"
