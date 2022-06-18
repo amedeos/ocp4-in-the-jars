@@ -338,3 +338,18 @@
       owner: kni
       group: kni
 
+  - name: Download tmate
+    get_url:
+      url: "https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-amd64.tar.xz"
+      dest: /home/kni/tmate-2.4.0-static-linux-amd64.tar.xz
+      mode: 0664
+
+  - name: Uncompress tmate
+    shell: |
+      tar -xvf /home/kni/tmate-2.4.0-static-linux-amd64.tar.xz -C /home/kni/
+
+  - name: Move tmate under /usr/bin
+    shell: |
+      mv -f /home/kni/tmate-2.4.0-static-linux-amd64/tmate /usr/bin/
+    become: True
+
