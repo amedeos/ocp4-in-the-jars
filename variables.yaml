@@ -48,8 +48,10 @@ kvmhost:
   enable_portfw: True
   replace_ssh_key: True
 cluster_name: ocp4-lab
-domain: ocp4-lab.example.com
-base_domain: example.com
+domain: ocp4-lab.duckdns.org
+base_domain: duckdns.org
+enable_ddns_duckdns: True
+enable_letsencrypt: True
 # used on cleanup
 image_dir: /var/lib/libvirt/images
 image_dir_bastion: /var/lib/libvirt/imagesssd

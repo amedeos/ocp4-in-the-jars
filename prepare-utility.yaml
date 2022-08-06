@@ -327,7 +327,7 @@
 
   - name: Configure forward domain
     template:
-      src: "ansible-templates/var/named/{{ domain }}.db"
+      src: "ansible-templates/var/named/named-forward.db"
       dest: "/var/named/{{ domain }}.db"
       backup: True
       owner: root
@@ -335,7 +335,7 @@
 
   - name: Configure reverse domain
     template:
-      src: "ansible-templates/var/named/{{ domain }}.reverse.db"
+      src: "ansible-templates/var/named/named-reverse.db"
       dest: "/var/named/{{ domain }}.reverse.db"
       backup: True
       owner: root

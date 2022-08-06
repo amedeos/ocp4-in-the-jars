@@ -5,3 +5,5 @@ ansible-ssh
 *.temp
 hosts-utility*
 hosts-bastion*
+hosts-kvmhost
+*.ORIG
