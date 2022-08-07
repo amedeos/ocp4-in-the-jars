@@ -508,6 +508,10 @@
     when:
       - kvmhost.replace_ssh_key|bool
 
+  - name: Overwrite replace_ddns_duckdns
+    shell: |
+      sed -i -E 's/replace_ddns_duckdns:.*/replace_ddns_duckdns: True/g' /root/ocp4-in-the-jars/variables.yaml
+
   - name: Create vimrc file
     template:
       src: ansible-templates/home/kni/vimrc

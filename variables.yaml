@@ -47,6 +47,7 @@ kvmhost:
   reboot_timeout: 1200
   enable_portfw: True
   replace_ssh_key: True
+  replace_ddns_duckdns: False
 cluster_name: ocp4-lab
 domain: ocp4-lab.duckdns.org
 base_domain: duckdns.org

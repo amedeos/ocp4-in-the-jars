@@ -1,0 +1,189 @@
+- name:  Add hypervisor host in inventory
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    when:
+      - item.state == "present"
+    with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+- name:  Add Bastion VM/Node
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add bastion group-host - no localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Add bastion group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+- name: Configure valid certificate
+  hosts: bastion
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Update duckdns record - with apps vip
+    shell: |
+      CURL=$(which curl)
+      ${CURL} 'https://www.duckdns.org/update?domains={{ cluster_name }}&token={{ duckdns_token }}&ip={{ vip.apps }}'
+    when: not kvmhost.replace_ddns_duckdns|bool
+
+  - name: Update duckdns record - hypervisor ip
+    shell: |
+      CURL=$(which curl)
+      ${CURL} 'https://www.duckdns.org/update?domains={{ cluster_name }}&token={{ duckdns_token }}&ip={{ ansible_default_ipv4.address }}'
+    when: kvmhost.replace_ddns_duckdns|bool
+
+  - name: Create certificates dir
+    file:
+      path: "certs-letsencrypt/{{ domain }}"
+      state: directory
+      mode: 0755
+  
+  - name: Create account-key
+    openssl_privatekey:
+      path: "certs-letsencrypt/account.key"
+      type: RSA
+      size: 4096
+  
+  - name: Fetch letsencrypt root ca
+    get_url:
+      url: https://letsencrypt.org/certs/isrgrootx1.pem.txt
+      dest: "certs-letsencrypt/isrgrootx1.pem"
+  
+  - name: Create {{ domain }}.key
+    openssl_privatekey:
+      path: "certs-letsencrypt/{{ domain }}/cert.key"
+      type: RSA
+      size: 4096
+  
+  - name: Generate an OpenSSL Certificate Signing Request with subjectAltName extension
+    openssl_csr:
+      path: "certs-letsencrypt/{{ domain }}/cert.csr"
+      privatekey_path: "certs-letsencrypt/{{ domain }}/cert.key"
+      subject_alt_name: "DNS:*.apps.{{ domain }}"
+      #subject_alt_name: "DNS:*.apps.{{ domain }},DNS:api.{{ domain }}"
+  
+  - name: Create a challenge for {{ domain }} using a account key file.
+    acme_certificate:
+      account_key_src: "certs-letsencrypt/account.key"
+      #account_email: "ocp4-lab@example.com"
+      src: "certs-letsencrypt/{{ domain }}/cert.csr"
+      cert: "certs-letsencrypt/{{ domain }}/cert.crt"
+      challenge: dns-01
+      acme_directory: "https://acme-v02.api.letsencrypt.org/directory"
+      acme_version: 2
+      # Renew if the certificate is at least 30 days old
+      remaining_days: 60
+      terms_agreed: yes
+    register: sample_com_challenge
+  
+  - name: Debug var only with -vv
+    debug:
+      var: sample_com_challenge
+      verbosity: 2
+
+  - name: Set challenge_data_dns
+    set_fact:  # noqa no-handler
+      challenge_data_dns: "{{ sample_com_challenge.challenge_data_dns }}"
+    when: sample_com_challenge is changed
+
+  - name: Create DNS record at duckdns
+    shell: |2
+      #!/usr/bin/env bash
+      #
+      CURL=$(which curl)
+      #echo "Item.0.key {{ item.0.key }} , Item.1 {{ item.1 }}" | tee -a certs-letsencrypt/item.txt
+      if [ "{{ item.0.key }}" == "_acme-challenge.apps.{{ domain }}" ]; then
+        ${CURL} 'https://www.duckdns.org/update?domains={{ cluster_name }}&token={{ duckdns_token }}&txt={{ item.1 }}'
+      fi
+      exit 0
+    register: record
+    loop: "{{ challenge_data_dns | default({}) | dict2items | subelements('value') }}"
+    when: sample_com_challenge is changed
+
+  - name: Let the challenge be validated and retrieve the cert and intermediate certificate
+    acme_certificate:  # noqa no-handler
+      account_key_src: "certs-letsencrypt/account.key"
+      #account_email: "ocp4-lab@example.com"
+      src: "certs-letsencrypt/{{ domain }}/cert.csr"
+      cert: "certs-letsencrypt/{{ domain }}/cert.crt"
+      fullchain: "certs-letsencrypt/{{ domain }}/fullchain.crt"
+      chain: "certs-letsencrypt/{{ domain }}/intermediate.crt"
+      challenge: dns-01
+      acme_version: 2
+      acme_directory: "https://acme-v02.api.letsencrypt.org/directory"
+      remaining_days: 60
+      data: "{{ sample_com_challenge }}"
+    when: sample_com_challenge is changed
+
+  - name: Backup proxy cluster configuration
+    shell: |
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig get proxy/cluster -oyaml | tee proxy-cluster-backup-$(date +%Y-%m-%d-%H%M%S).yaml
+
+  - name: Backup ingresscontroller
+    shell: |
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig get ingresscontrollers.operator -n openshift-ingress-operator default -oyaml | tee ingresscontrollers.operator-default-backup-$(date +%Y-%m-%d-%H%M%S).yaml
+
+  - name: Create ca-bundle.pem
+    shell: |
+      rm -f certs-letsencrypt/{{ domain }}/ca-bundle.pem
+      cat certs-letsencrypt/isrgrootx1.pem certs-letsencrypt/{{ domain }}/intermediate.crt >> certs-letsencrypt/{{ domain }}/ca-bundle.pem
+
+  - name: Create configmap custom-ca
+    shell: |
+      CM=custom-ca
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig delete configmap ${CM} -n openshift-config
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig create configmap ${CM} --from-file=ca-bundle.crt=certs-letsencrypt/{{ domain }}/ca-bundle.pem -n openshift-config
+
+  - name: Create secret with cert/key
+    shell: |
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig delete secret tls apps-certs -n openshift-ingress
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig create secret tls apps-certs --cert=certs-letsencrypt/{{ domain }}/cert.crt --key=certs-letsencrypt/{{ domain }}/cert.key -n openshift-ingress
+
+  - name: Patch proxy cluster
+    shell: |
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig patch proxy/cluster --type=merge --patch='{"spec":{"trustedCA":{"name":"custom-ca"}}}'
+
+  - name: Patch ingresscontroller
+    shell: |
+      oc --kubeconfig={{ cluster_name }}/auth/kubeconfig patch ingresscontroller.operator default --type=merge -p '{"spec":{"defaultCertificate": {"name": "apps-certs"}}}' -n openshift-ingress-operator
+      
+  - name: Clear duckdns TXT record
+    shell: |
+      CURL=$(which curl)
+      ${CURL} 'https://www.duckdns.org/update?domains={{ cluster_name }}&token={{ duckdns_token }}&txt=&clear=true'
+

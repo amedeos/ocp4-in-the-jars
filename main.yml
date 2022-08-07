@@ -25,3 +25,10 @@
 - import_playbook: install-ocp.yaml
   tags:
     - install-ocp
+
+- import_playbook: configure-letsencrypt.yaml
+  tags:
+    - configure-letsencrypt
+  when:
+    - enable_ddns_duckdns|bool
+    - enable_letsencrypt|bool
