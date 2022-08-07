@@ -283,6 +283,7 @@
         - mcg
         - nmap
         - ansible
+        - git
 
   - name: Create User kni
     user:
