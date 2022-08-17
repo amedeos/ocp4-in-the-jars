@@ -48,8 +48,8 @@ kvmhost:
   enable_portfw: True
   replace_ssh_key: True
   replace_ddns_duckdns: False
-cluster_name: ocp4-lab
-domain: ocp4-lab.duckdns.org
+cluster_name: ocp-lab
+domain: ocp-lab.duckdns.org
 base_domain: duckdns.org
 enable_ddns_duckdns: True
 enable_letsencrypt: True
@@ -59,4 +59,4 @@ image_dir_bastion: /var/lib/libvirt/imagesssd
 image: rhel-8.6-x86_64-kvm.qcow2
 image_location: http://192.168.1.70/images/rhel-8.6-x86_64-kvm.qcow2
 supported_os: rhel8
-ocpversion: stable-4.10
+ocpversion: stable-4.11
