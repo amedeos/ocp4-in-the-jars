@@ -32,3 +32,10 @@
   when:
     - enable_ddns_duckdns|bool
     - enable_letsencrypt|bool
+
+- import_playbook: scaledown-bastion.yaml
+  tags:
+    - scaledown-bastion
+  when:
+    - post_scaledown|bool
+ 

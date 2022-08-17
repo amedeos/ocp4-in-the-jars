@@ -33,6 +33,9 @@ bastion:
   cpu: 6
   memory: 24576
   disk: 100G
+  post_cpu: 2
+  post_memory: 4096
+  post_scaledown: True
 master:
   cpu: 4
   memory: 16384

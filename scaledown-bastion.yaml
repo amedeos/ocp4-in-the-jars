@@ -1,0 +1,109 @@
+- name: Create inventory
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add bastion group-host - no localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Add bastion group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    with_items:
+      - "{{ bastion_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+    when:
+      - item.hypervisor_name != "localhost"
+      - item.state == "present"
+
+- name: Shutdown bastion
+  hosts:
+    - bastion
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  ignore_errors: True
+  ignore_unreachable: True
+  gather_facts: False
+  tasks:
+  - name: Shutdown host
+    shell: |
+      shutdown -h now
+    ignore_errors: True
+
+  - name: Destroy virsh domain
+    virt:
+      name: "{{ item.name }}"
+      state: destroyed
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    when:
+      - item.state == "present"
+    with_items:
+      - "{{ bastion_nodes }}"
+    ignore_errors: True
+
+  - name: Undefine virsh domain
+    virt:
+      name: "{{ item.name }}"
+      command: undefine
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    when:
+      - item.state == "present"
+    with_items:
+      - "{{ bastion_nodes }}"
+    ignore_errors: True
+
+  - name: Re-Defining the bastion vm
+    shell: |
+      virt-install --ram {{ bastion.post_memory }} --vcpus {{ bastion.post_cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/bastion.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virsh define /tmp/{{ item.name }}.xml
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+
+  - name: Start virsh domain
+    virt:
+      name: "{{ item.name }}"
+      state: running
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    when:
+      - item.state == "present"
+    with_items:
+      - "{{ bastion_nodes }}"
+    ignore_errors: True
+
