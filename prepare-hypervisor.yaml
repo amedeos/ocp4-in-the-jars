@@ -511,6 +511,7 @@
   - name: Overwrite replace_ddns_duckdns
     shell: |
       sed -i -E 's/replace_ddns_duckdns:.*/replace_ddns_duckdns: True/g' /root/ocp4-in-the-jars/variables.yaml
+    when: enable_ddns_duckdns|bool
 
   - name: Create vimrc file
     template:
