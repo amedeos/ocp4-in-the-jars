@@ -107,3 +107,13 @@
       - "{{ bastion_nodes }}"
     ignore_errors: True
 
+  - name: Sleeping till ssh on bastion vm is up
+    wait_for:
+      port: 22
+      host: "{{ item.provisioning_ip }}"
+      delay: 20
+      timeout: 300
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+
