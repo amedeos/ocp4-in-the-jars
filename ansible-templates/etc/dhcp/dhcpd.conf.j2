@@ -15,17 +15,18 @@ subnet {{ baremetal_net.net }} netmask {{ baremetal_net.netmask }} {
 {% endfor %}
         option ntp-servers {{ baremetal_net.ntp }};
         option domain-search "{{ domain }}";
+        option interface-mtu {{ baremetal_net.mtu }};
         range {{ baremetal_net.dhcp_start }} {{ baremetal_net.dhcp_end }};
         # master
 {% for host in master_nodes %}
 {% if host != 'localhost' %}
-        host {{ host.name }}.{{ domain }} { hardware ethernet {{ host.baremetal_mac }}; fixed-address {{ host.baremetal_ip }}; option host-name "{{ host.name }}"; }
+        host {{ host.name }}.{{ domain }} { hardware ethernet {{ host.baremetal_mac }}; fixed-address {{ host.baremetal_ip }}; option host-name "{{ host.name }}"; option interface-mtu {{ baremetal_net.mtu }}; }
 {% endif %}
 {% endfor %}
         # worker
 {% for host in worker_nodes %}
 {% if host != 'localhost' %}
-        host {{ host.name }}.{{ domain }} { hardware ethernet {{ host.baremetal_mac }}; fixed-address {{ host.baremetal_ip }}; option host-name "{{ host.name }}"; }
+        host {{ host.name }}.{{ domain }} { hardware ethernet {{ host.baremetal_mac }}; fixed-address {{ host.baremetal_ip }}; option host-name "{{ host.name }}"; option interface-mtu {{ baremetal_net.mtu }}; }
 {% endif %}
 {% endfor %}
 }

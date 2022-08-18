@@ -143,6 +143,7 @@
         IPADDR={{ bastion_nodes[0].baremetal_ip }}
         GATEWAY={{ baremetal_net.gateway }}
         NETMASK={{ baremetal_net.netmask }}
+        MTU={{ baremetal_net.mtu }}
         ONBOOT=yes
         NM_CONTROLLED=yes
     delegate_to: "{{ item.hypervisor_name }}"
