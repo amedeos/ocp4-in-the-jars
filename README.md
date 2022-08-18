@@ -132,6 +132,7 @@ Open **variables.yaml** and **vault-variables.yaml** files and edit all variable
 | ssh_pub | Your ssh public key |
 | ssh_key | Your ssh private key |
 | duckdns_token | Your duckdns.org token for Dynamic DNS |
+| pull-secret.txt | Your pull-secret from cloud.redhat.com |
 
 ### vm-ansible-nodes.json
 This file maps all VM to your NUC hosts, if you use "localhost", then the Ansible local connection will be used, otherwise Ansible will use ssh connection.
