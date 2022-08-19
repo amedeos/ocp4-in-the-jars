@@ -227,35 +227,18 @@
     shell: |
       subscription-manager attach --pool={{ rh_subcription_pool }}
 
-  - name: Set repository for the bastion
+  - name: Set base repository for the bastion
     shell: |
-      subscription-manager repos --disable='*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms --enable=rh-odf-4-for-rhel-8-x86_64-rpms
+      subscription-manager repos --disable='*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms
+
+  # maybe the subscription id shouln't has odf subs
+  - name: Enable odf repository for the bastion
+    shell: |
+      subscription-manager repos --enable=rh-odf-4-for-rhel-8-x86_64-rpms
+    ignore_errors: True
 
   - name: Clean yum cache
     command: yum clean all
-
-  #- name: Install network-scripts
-  #  dnf:
-  #    name:
-  #      - network-scripts
-
-  #- name: Disable NetworkManager for eth0
-  #  shell: |
-  #    sed -i 's/NM_CONTROLLED=yes/NM_CONTROLLED=no/g' /etc/sysconfig/network-scripts/ifcfg-eth0
-
-  #- name: Enable network.service
-  #  systemd:
-  #    name: network
-  #    daemon_reload: True
-  #    enabled: True
-
-  #- name: Disable NetworkManager
-  #  systemd:
-  #    name: NetworkManager
-  #    enabled: False
-
-  #- name: Reboot bastion
-  #  reboot:
 
   - name: Updating system to latest version
     dnf:
@@ -280,10 +263,16 @@
         - tree
         - redhat-lsb-core
         - ipmitool
-        - mcg
         - nmap
         - ansible
         - git
+
+  # maybe the subscription id shouln't has odf subs
+  - name: Install mcg
+    dnf:
+      name:
+        - mcg
+    ignore_errors: True
 
   - name: Create User kni
     user:
