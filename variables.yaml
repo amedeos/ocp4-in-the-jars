@@ -19,7 +19,7 @@ baremetal_net:
   ntp: "103.16.182.23,103.16.182.214"
   dhcp_start: 192.168.203.90
   dhcp_end: 192.168.203.110
-  mtu: 3400
+  mtu: 1500
 vip:
   api: 192.168.203.80
   apiint: 192.168.203.80
@@ -32,7 +32,7 @@ utility:
   disk: 100G
 bastion:
   cpu: 6
-  memory: 24576
+  memory: 16384
   disk: 100G
   post_cpu: 2
   post_memory: 4096
@@ -53,10 +53,10 @@ kvmhost:
   replace_ssh_key: True
   replace_ddns_duckdns: False
 cluster_name: ocp-lab
-domain: ocp-lab.duckdns.org
-base_domain: duckdns.org
-enable_ddns_duckdns: True
-enable_letsencrypt: True
+base_domain: example.com
+domain: "{{ cluster_name }}.{{ base_domain }}"
+enable_ddns_duckdns: False
+enable_letsencrypt: False
 # used on cleanup
 image_dir: /var/lib/libvirt/images
 image_dir_bastion: /var/lib/libvirt/imagesssd

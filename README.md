@@ -96,7 +96,7 @@ OpenShift Container Platform requires various Virtual Machines, below the list o
 | VM | Role | vCPU | vRAM | Disks |
 | :--: | :----: | :----: | :----: | :-----: |
 | utility | - | 2 | 2G | 1x100G |
-| bastion | provisioner | 6 | 24G | 1x100G |
+| bastion | provisioner | 6 | 16G | 1x100G |
 | master-0 | master | 4 | 16G | 1x150G |
 | master-1 | master | 4 | 16G | 1x150G |
 | master-2 | master | 4 | 16G | 1x150G |
@@ -104,7 +104,7 @@ OpenShift Container Platform requires various Virtual Machines, below the list o
 | worker-1 | worker | 8 | 32G | 1x150G + 1x400G |
 | worker-2 | worker | 8 | 32G | 1x150G + 1x400G |
 | | | | | |
-| | **Total:** | **44** | **170G** | **2.3T** |
+| | **Total:** | **44** | **162G** | **2.3T** |
 
 The most critical resource is the vRAM, because all hosts, during the installation will be memory consuming; instead all disks will be created in thin provisioning and for this reason a clean deploy will take up to 10-15% provisioned space.
 
