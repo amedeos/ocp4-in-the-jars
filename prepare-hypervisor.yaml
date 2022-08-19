@@ -1,5 +1,6 @@
 - name:  Prepare Hypervisor
   hosts: kvmhost
+  become: True
   vars_files:
     - variables.yaml
     - bm-ansible-nodes.json
@@ -8,10 +9,13 @@
     dnf:
       name: "*"
       state: latest
+    register: upgrade_system
 
   - name: Reboot after Upgrade
     reboot:
       reboot_timeout: "{{ kvmhost.reboot_timeout }}"
+    when:
+      - upgrade_system.changed
 
   - name: Check selinux status
     shell: |
@@ -62,6 +66,99 @@
         net.ipv6.neigh.default.gc_thresh2 = 16384
         net.ipv6.neigh.default.gc_thresh3 = 32768
 
+  # on this case (isolated) the bridge kept default gw ip
+  - name: Create provisioning bridge - isolated
+    nmcli:
+      type: bridge
+      conn_name: "{{ bridge_prov }}"
+      ifname: "{{ bridge_prov }}"
+      ip4: "{{ provision_net.bridge_prov_ip }}/{{ provision_net.prefix }}"
+      stp: False
+      mtu: "{{ provision_net.mtu }}"
+      state: present
+    when:
+      - kvmhost.provisioning_bridge_create|bool
+      - kvmhost.provisioning_bridge_isolated|bool
+
+  - name: Create provisioning bridge template
+    template:
+      src: ansible-templates/root/kvmhost-provisioning-net.sh
+      dest: /root/kvmhost-provisioning-net.sh
+      mode: 0755
+      owner: root
+      group: root
+    when:
+      - kvmhost.provisioning_bridge_create|bool
+      - not kvmhost.provisioning_bridge_isolated|bool
+
+  - name: Create provisioning bridge - steal ip
+    shell: |
+      nohup /root/kvmhost-provisioning-net.sh &
+    when:
+      - kvmhost.provisioning_bridge_create|bool
+      - not kvmhost.provisioning_bridge_isolated|bool
+
+  - name: Add vbmc_ip to provisioning bridge - isolated
+    shell: |
+      nmcli connection modify {{ bridge_prov }} +ipv4.addresses {{ item.vbmc_ip }}/{{ provision_net.prefix }}
+    with_items:
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ bastion_nodes }}"
+    when:
+      - kvmhost.provisioning_bridge_create|bool
+      - kvmhost.provisioning_bridge_isolated|bool
+
+  - name: Add vbmc_ip to provisioning bridge
+    shell: |
+      nmcli connection modify {{ bridge_prov }} +ipv4.addresses {{ item.vbmc_ip }}/{{ provision_net.prefix }}
+    with_items:
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ bastion_nodes }}"
+    when:
+      - kvmhost.provisioning_bridge_create|bool
+      - not kvmhost.provisioning_bridge_isolated|bool
+      - ansible_nodename == item.hypervisor_name
+
+  - name: Create baremetal bridge - isolated
+    nmcli:
+      type: bridge
+      conn_name: "{{ bridge_bm }}"
+      ifname: "{{ bridge_bm }}"
+      ip4: "{{ baremetal_net.gateway }}/{{ baremetal_net.prefix }}"
+      stp: False
+      state: present
+    when:
+      - kvmhost.baremetal_bridge_create|bool
+      - kvmhost.baremetal_bridge_isolated|bool
+
+  - name: Create baremetal bridge template
+    template:
+      src: ansible-templates/root/kvmhost-baremetal-net.sh
+      dest: /root/kvmhost-baremetal-net.sh
+      mode: 0755
+      owner: root
+      group: root
+    when:
+      - kvmhost.baremetal_bridge_create|bool
+      - not kvmhost.baremetal_bridge_isolated|bool
+
+  - name: Create baremetal bridge - not isolated
+    shell: |
+      nohup /root/kvmhost-baremetal-net.sh &
+    when:
+      - kvmhost.baremetal_bridge_create|bool
+      - not kvmhost.baremetal_bridge_isolated|bool
+
+  - name: Reboot after creating bridges
+    reboot:
+      reboot_timeout: "{{ kvmhost.reboot_timeout }}"
+    when:
+      - kvmhost.provisioning_bridge_create|bool or kvmhost.baremetal_bridge_create|bool
+
   - name: Getting rp_filter variables to set
     shell: |
       sysctl -A 2> /dev/null | grep "\.rp_filter"  | cut -d"=" -f1
@@ -82,51 +179,6 @@
     systemd:
       name: systemd-sysctl.service
       state: restarted
-
-  - name: Create provisioning bridge
-    nmcli:
-      type: bridge
-      conn_name: "{{ bridge_prov }}"
-      ifname: "{{ bridge_prov }}"
-      ip4: "{{ provision_net.bridge_prov_ip }}/{{ provision_net.prefix }}"
-      stp: False
-      state: present
-
-  - name: Add vbmc_ip to provisioning bridge
-    shell: |
-      nmcli connection modify {{ bridge_prov }} +ipv4.addresses {{ item.vbmc_ip }}/{{ provision_net.prefix }}
-    with_items:
-      - "{{ master_nodes }}"
-      - "{{ worker_nodes }}"
-      - "{{ utility_nodes }}"
-      - "{{ bastion_nodes }}"
-
-  - name: Create baremetal bridge
-    nmcli:
-      type: bridge
-      conn_name: "{{ bridge_bm }}"
-      ifname: "{{ bridge_bm }}"
-      ip4: "{{ baremetal_net.gateway }}/{{ baremetal_net.prefix }}"
-      stp: False
-      state: present
-
-  - name: Create restart-br.sh
-    copy:
-      dest: /root/restart-br.sh
-      owner: root
-      group: root
-      mode: 0755
-      content: |
-        #!/usr/bin/env bash
-        #
-        nmcli connection down {{ bridge_bm }}
-        nmcli connection up {{ bridge_bm }}
-        nmcli connection down {{ bridge_prov }}
-        nmcli connection up {{ bridge_prov }}
-
-  - name: Set bridge down / up
-    shell: |
-      nohup /root/restart-br.sh
 
   - name: enable virt module
     shell: |
@@ -299,6 +351,21 @@
       protocol: icmp
       jump: ACCEPT
 
+  - name: Allow ipmi traffic to vbmc_ip - isolated
+    iptables:
+      chain: INPUT
+      protocol: udp
+      destination: "{{ item.vbmc_ip }}"
+      destination_port: "{{ item.vbmc_port }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ master_nodes }}"
+      - "{{ worker_nodes }}"
+      - "{{ utility_nodes }}"
+      - "{{ bastion_nodes }}"
+    when:
+      - kvmhost.provisioning_bridge_isolated|bool
+
   - name: Allow ipmi traffic to vbmc_ip
     iptables:
       chain: INPUT
@@ -311,6 +378,9 @@
       - "{{ worker_nodes }}"
       - "{{ utility_nodes }}"
       - "{{ bastion_nodes }}"
+    when:
+      - ansible_nodename == item.hypervisor_name
+      - not kvmhost.provisioning_bridge_isolated|bool
 
   - name: Allow ipmi incoming traffic from provisioning network
     iptables:
@@ -333,6 +403,8 @@
     with_items:
       - "{{ provision_net.net }}/{{ provision_net.prefix }}"
       - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: enable destination forward
     iptables:
@@ -342,6 +414,8 @@
     with_items:
       - "{{ provision_net.net }}/{{ provision_net.prefix }}"
       - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: enable MASQUERADING
     iptables:
@@ -352,6 +426,8 @@
     with_items:
       - "{{ provision_net.net }}/{{ provision_net.prefix }}"
       - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: enable port forwarding for port 443
     iptables:
@@ -364,6 +440,7 @@
       jump: DNAT
     when:
       - kvmhost.enable_portfw|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: enable port forwarding for port 6443
     iptables:
@@ -376,6 +453,7 @@
       jump: DNAT
     when:
       - kvmhost.enable_portfw|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Set the last rule as REJECT for FORWARD
     iptables:
@@ -386,14 +464,14 @@
     shell: |
       /usr/sbin/iptables-save > /etc/sysconfig/iptables
 
-  - name: iptables flush filter
+  - name: ip6tables flush filter
     iptables:
       ip_version: ipv6
       chain: "{{ item }}"
       flush: yes
     with_items:  [ 'INPUT', 'FORWARD', 'OUTPUT' ]
 
-  - name: iptables flush nat
+  - name: ip6tables flush nat
     iptables:
       table: nat
       ip_version: ipv6
@@ -461,6 +539,36 @@
       state: started
       enabled: True
 
+  - name: Ensure nested virtualization are enabled
+    copy:
+      dest: /etc/modprobe.d/kvm.conf
+      content: |
+        # Setting modprobe kvm_intel/kvm_amd nested = 1
+        # only enables Nested Virtualization until the next reboot or
+        # module reload. Uncomment the option applicable
+        # to your system below to enable the feature permanently.
+        #
+        # User changes in this file are preserved across upgrades.
+        #
+        # For Intel
+        options kvm_intel nested=1
+        #
+        # For AMD
+        options kvm_amd nested=1
+    register: enable_nested
+
+  - name: Run dracut
+    shell: |
+      dracut -fv
+    when:
+      - enable_nested.changed
+
+  - name: Reboot after dracut
+    reboot:
+      reboot_timeout: "{{ kvmhost.reboot_timeout }}"
+    when:
+      - enable_nested.changed
+
   - name: Restart Libvirtd Service
     systemd:
       state: restarted
@@ -474,22 +582,34 @@
       cd /root/ocp4-in-the-jars
       git pull
     ignore_errors: True
+    when:
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: create images dir
     file:
       path: /root/images
       state: directory
+    when:
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Overwrite bm-ansible-nodes.json file
     copy:
       backup: True
       src: bm-ansible-nodes-disconnected.json
       dest: /root/ocp4-in-the-jars/bm-ansible-nodes.json
+    when:
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Overwrite image_location
     shell: |
       IMAGE=$(egrep '^image:\s+' /root/ocp4-in-the-jars/variables.yaml | sed -E 's/^image:\s+//g')
       sed -i -E "s@^image_location:\s+.*@image_location: /root/images/${IMAGE}@g" /root/ocp4-in-the-jars/variables.yaml
+    when:
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Remove repo provided SSH key
     file:
@@ -497,6 +617,8 @@
       state: absent
     when:
       - kvmhost.replace_ssh_key|bool
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
     with_items:
       - /root/ocp4-in-the-jars/files/.ssh/id_rsa
       - /root/ocp4-in-the-jars/files/.ssh/id_rsa.pub
@@ -507,11 +629,16 @@
       type: rsa
     when:
       - kvmhost.replace_ssh_key|bool
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Overwrite replace_ddns_duckdns
     shell: |
       sed -i -E 's/replace_ddns_duckdns:.*/replace_ddns_duckdns: True/g' /root/ocp4-in-the-jars/variables.yaml
-    when: enable_ddns_duckdns|bool
+    when:
+      - enable_ddns_duckdns|bool
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Create vimrc file
     template:
@@ -540,3 +667,7 @@
         - "# {{ ansible_default_ipv4.address }} noobaa-mgmt-openshift-storage.apps.{{ domain }}            #"
         - "#                                                                                   #"
         - "#####################################################################################"
+    when:
+      - kvmhost.provisioning_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool
+
