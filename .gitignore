@@ -5,6 +5,7 @@ ansible-ssh
 *.temp
 hosts-utility*
 hosts-bastion*
-hosts-kvmhost
+hosts-kvmhost*
 *.ORIG
 appunti*
+custom-variables.yaml
