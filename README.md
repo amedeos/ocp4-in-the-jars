@@ -102,7 +102,7 @@ OpenShift Container Platform requires various Virtual Machines, below the list o
 | master-2 | master | 4 | 16G | 1x150G |
 | worker-0 | worker | 8 | 32G | 1x150G + 1x400G |
 | worker-1 | worker | 8 | 32G | 1x150G + 1x400G |
-| worker-2 | worker | 8 | 32G | 1x150G + 1x400G |
+| worker-2 (optional) | worker | 8 | 32G | 1x150G + 1x400G |
 | | | | | |
 | | **Total:** | **44** | **162G** | **2.3T** |
 
