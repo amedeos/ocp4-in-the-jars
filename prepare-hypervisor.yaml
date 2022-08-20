@@ -130,6 +130,7 @@
       ifname: "{{ bridge_bm }}"
       ip4: "{{ baremetal_net.gateway }}/{{ baremetal_net.prefix }}"
       stp: False
+      mtu: "{{ baremetal_net.mtu }}"
       state: present
     when:
       - kvmhost.baremetal_bridge_create|bool
@@ -152,6 +153,20 @@
     when:
       - kvmhost.baremetal_bridge_create|bool
       - not kvmhost.baremetal_bridge_isolated|bool
+
+  - name: Fix mtu for isolated network - provisioning
+    shell: |
+      nmcli connection modify {{ bridge_prov }} 802-3-ethernet.mtu {{ provision_net.mtu }}
+    when:
+      - kvmhost.provisioning_bridge_create|bool
+      - kvmhost.provisioning_bridge_isolated|bool
+
+  - name: Fix mtu for isolated network - baremetal
+    shell: |
+      nmcli connection modify {{ bridge_bm }} 802-3-ethernet.mtu {{ baremetal_net.mtu }}
+    when:
+      - kvmhost.baremetal_bridge_create|bool
+      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Reboot after creating bridges
     reboot:
