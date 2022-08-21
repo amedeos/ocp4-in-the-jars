@@ -85,7 +85,7 @@
 
   - name: Copy pull-secret.txt
     copy:
-      src: ansible-templates/home/kni/pull-secret.txt
+      src: "{{ pull_secret_file }}"
       dest: /home/kni/pull-secret.txt
       owner: kni
       group: kni
