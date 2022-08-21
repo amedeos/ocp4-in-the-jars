@@ -1,4 +1,4 @@
-- name:  Create SSH key to trush on whole infrastructure
+- name:  Create SSH key to trust on whole infrastructure
   hosts: localhost
   vars_files:
     - variables.yaml
