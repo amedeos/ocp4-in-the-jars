@@ -3,7 +3,7 @@
         {
             "name": "bastion",
             "state": "present",
-            "hypervisor_name": "amelab01.example.com",
+            "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
@@ -19,7 +19,7 @@
         {
             "name": "utility",
             "state": "present",
-            "hypervisor_name": "amelab01.example.com",
+            "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
@@ -33,9 +33,8 @@
     "master_nodes": [
         {
             "name": "master-0",
-            "index_node": "0",
             "state": "present",
-            "hypervisor_name": "amelab02.example.com",
+            "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
@@ -49,9 +48,8 @@
         },
         {
             "name": "master-1",
-            "index_node": "1",
             "state": "present",
-            "hypervisor_name": "amelab02.example.com",
+            "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
@@ -65,9 +63,8 @@
         },
         {
             "name": "master-2",
-            "index_node": "2",
             "state": "present",
-            "hypervisor_name": "amelab02.example.com",
+            "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",
@@ -83,13 +80,12 @@
     "worker_nodes": [
         {
             "name": "worker-0",
-            "index_node": "0",
             "state": "present",
             "is_odf": "true",
             "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
-            "hypervisor_image_dir": "/var/lib/libvirt/imagesssd",
+            "hypervisor_image_dir": "/var/lib/libvirt/images",
             "provisioning_mac": "52:54:00:00:32:03",
             "baremetal_mac": "52:54:00:00:33:03",
             "vbmc_pre_cmd": "",
@@ -100,13 +96,12 @@
         },
         {
             "name": "worker-1",
-            "index_node": "1",
             "state": "present",
             "is_odf": "true",
             "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
-            "hypervisor_image_dir": "/var/lib/libvirt/imagesssd",
+            "hypervisor_image_dir": "/var/lib/libvirt/images",
             "provisioning_mac": "52:54:00:00:32:04",
             "baremetal_mac": "52:54:00:00:33:04",
             "vbmc_pre_cmd": "",
@@ -117,10 +112,9 @@
         },
         {
             "name": "worker-2",
-            "index_node": "2",
             "state": "present",
             "is_odf": "true",
-            "hypervisor_name": "amelab01.example.com",
+            "hypervisor_name": "localhost",
             "hypervisor_user": "root",
             "hypervisor_ssh_key": "~/.ssh/id_rsa",
             "hypervisor_image_dir": "/var/lib/libvirt/images",

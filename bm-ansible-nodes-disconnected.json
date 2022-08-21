@@ -33,7 +33,6 @@
     "master_nodes": [
         {
             "name": "master-0",
-            "index_node": "0",
             "state": "present",
             "hypervisor_name": "localhost",
             "hypervisor_user": "root",
@@ -49,7 +48,6 @@
         },
         {
             "name": "master-1",
-            "index_node": "1",
             "state": "present",
             "hypervisor_name": "localhost",
             "hypervisor_user": "root",
@@ -65,7 +63,6 @@
         },
         {
             "name": "master-2",
-            "index_node": "2",
             "state": "present",
             "hypervisor_name": "localhost",
             "hypervisor_user": "root",
@@ -83,7 +80,6 @@
     "worker_nodes": [
         {
             "name": "worker-0",
-            "index_node": "0",
             "state": "present",
             "is_odf": "true",
             "hypervisor_name": "localhost",
@@ -100,7 +96,6 @@
         },
         {
             "name": "worker-1",
-            "index_node": "1",
             "state": "present",
             "is_odf": "true",
             "hypervisor_name": "localhost",
@@ -117,7 +112,6 @@
         },
         {
             "name": "worker-2",
-            "index_node": "2",
             "state": "present",
             "is_odf": "true",
             "hypervisor_name": "localhost",

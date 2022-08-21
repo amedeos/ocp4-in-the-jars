@@ -165,7 +165,6 @@ otherwise, if you want to deploy the master-2 on the NUC host **pippo02.example.
 ...
         {
             "name": "master-2",
-            "index_node": "2",
             "state": "present",
             "hypervisor_name": "pippo02.example.com",
             "hypervisor_user": "root",
