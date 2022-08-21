@@ -1,0 +1,14 @@
+- name:  Create SSH key to trush on whole infrastructure
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Generate id_rsa key
+    openssh_keypair:
+      path: "{{ ssh_key }}"
+      type: rsa
+      size: 4096
+      state: present
+      force: no

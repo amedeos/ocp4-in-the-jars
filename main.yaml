@@ -1,3 +1,7 @@
+- import_playbook: create-ssh-key.yaml
+  tags:
+    - create-ssh-key
+
 - import_playbook: prepare-images-bastion.yaml
   tags:
     - prepare-images-bastion

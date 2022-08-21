@@ -254,7 +254,7 @@
     run_once: True
     with_items: "{{ utility_nodes }}"
 
-  - name: Remote utility entry in /etc/hosts
+  - name: Remove utility entry in /etc/hosts
     lineinfile:
       path: /etc/hosts
       backup: True
@@ -264,3 +264,12 @@
     run_once: True
     with_items: "{{ utility_nodes }}"
 
+  - name: Remove SSH key
+    file:
+      path: "{{ item }}"
+      state: absent
+    when:
+      - delete_ssh_key_on_cleanup|bool
+    with_items:
+      - "{{ ssh_key }}"
+      - "{{ ssh_pub }}"

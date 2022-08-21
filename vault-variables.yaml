@@ -1,5 +1,6 @@
 ssh_pub: files/.ssh/id_rsa.pub
 ssh_key: files/.ssh/id_rsa
+delete_ssh_key_on_cleanup: True
 ### password used when one is sequired, for example ssh password
 secure_password: MOSTINSECUREPASSWORD
 ### your red hat customer portal username and password

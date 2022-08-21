@@ -52,7 +52,6 @@ kvmhost:
   enable_selinux: True
   reboot_timeout: 1200
   enable_portfw: True
-  replace_ssh_key: True
   replace_ddns_duckdns: False
   provisioning_bridge_create: True
   provisioning_bridge_isolated: True

@@ -11,3 +11,5 @@ appunti*
 custom-variables.yaml
 pull-secret.txt
 custom-bm-ansible-nodes.json
+*id_rsa
+*id_rsa.pub

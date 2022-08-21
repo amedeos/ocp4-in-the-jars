@@ -626,26 +626,26 @@
       - kvmhost.provisioning_bridge_isolated|bool
       - kvmhost.baremetal_bridge_isolated|bool
 
-  - name: Remove repo provided SSH key
-    file:
-      path: "{{ item }}"
-      state: absent
-    when:
-      - kvmhost.replace_ssh_key|bool
-      - kvmhost.provisioning_bridge_isolated|bool
-      - kvmhost.baremetal_bridge_isolated|bool
-    with_items:
-      - /root/ocp4-in-the-jars/files/.ssh/id_rsa
-      - /root/ocp4-in-the-jars/files/.ssh/id_rsa.pub
+  #- name: Remove repo provided SSH key
+  #  file:
+  #    path: "{{ item }}"
+  #    state: absent
+  #  when:
+  #    - kvmhost.replace_ssh_key|bool
+  #    - kvmhost.provisioning_bridge_isolated|bool
+  #    - kvmhost.baremetal_bridge_isolated|bool
+  #  with_items:
+  #    - /root/ocp4-in-the-jars/files/.ssh/id_rsa
+  #    - /root/ocp4-in-the-jars/files/.ssh/id_rsa.pub
 
-  - name: Create SSH key
-    openssh_keypair:
-      path: /root/ocp4-in-the-jars/files/.ssh/id_rsa
-      type: rsa
-    when:
-      - kvmhost.replace_ssh_key|bool
-      - kvmhost.provisioning_bridge_isolated|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+  #- name: Create SSH key
+  #  openssh_keypair:
+  #    path: /root/ocp4-in-the-jars/files/.ssh/id_rsa
+  #    type: rsa
+  #  when:
+  #    - kvmhost.replace_ssh_key|bool
+  #    - kvmhost.provisioning_bridge_isolated|bool
+  #    - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Overwrite replace_ddns_duckdns
     shell: |
