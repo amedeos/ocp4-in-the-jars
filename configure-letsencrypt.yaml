@@ -17,6 +17,16 @@
     with_items: "{{ bastion_nodes }}"
     when: item.hypervisor_name != "localhost"
 
+  - name: Update duckdns record - hypervisor ip
+    shell: |
+      CURL=$(which curl)
+      ${CURL} 'https://www.duckdns.org/update?domains={{ cluster_name }}&token={{ duckdns_token }}&ip={{ ansible_default_ipv4.address }}'
+    when:
+      - kvmhost.replace_ddns_duckdns|bool
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+
 - name:  Add Bastion VM/Node
   hosts: localhost
   vars_files:
@@ -60,12 +70,6 @@
       CURL=$(which curl)
       ${CURL} 'https://www.duckdns.org/update?domains={{ cluster_name }}&token={{ duckdns_token }}&ip={{ vip.apps }}'
     when: not kvmhost.replace_ddns_duckdns|bool
-
-  - name: Update duckdns record - hypervisor ip
-    shell: |
-      CURL=$(which curl)
-      ${CURL} 'https://www.duckdns.org/update?domains={{ cluster_name }}&token={{ duckdns_token }}&ip={{ ansible_default_ipv4.address }}'
-    when: kvmhost.replace_ddns_duckdns|bool
 
   - name: Create certificates dir
     file:
