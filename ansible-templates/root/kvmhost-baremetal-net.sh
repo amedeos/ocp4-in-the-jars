@@ -13,10 +13,10 @@ fi
 nmcli connection add ifname {{ bridge_bm }} type bridge con-name {{ bridge_bm }}
 nmcli connection modify {{ bridge_bm }} ipv4.method disabled ipv6.method ignore
 nmcli connection up {{ bridge_bm }}
-nmcli connection add type vlan con-name {{ bridge_prov }}.{{ kvmhost.baremetal_bridge_vlan }} ifname {{ bridge_prov }}.{{ kvmhost.baremetal_bridge_vlan }} dev {{ bridge_prov }} id {{ kvmhost.baremetal_bridge_vlan }}
-nmcli connection modify {{ bridge_prov }}.{{ kvmhost.baremetal_bridge_vlan }} master {{ bridge_bm }} slave-type bridge
-nmcli connection modify {{ bridge_prov }}.{{ kvmhost.baremetal_bridge_vlan }} 802-3-ethernet.mtu {{ provision_net.mtu }}
+nmcli connection add type vlan con-name {{ bridge_prov }}.{{ baremetal_net.vlan }} ifname {{ bridge_prov }}.{{ baremetal_net.vlan }} dev {{ bridge_prov }} id {{ baremetal_net.vlan }}
+nmcli connection modify {{ bridge_prov }}.{{ baremetal_net.vlan }} master {{ bridge_bm }} slave-type bridge
+nmcli connection modify {{ bridge_prov }}.{{ baremetal_net.vlan }} 802-3-ethernet.mtu {{ provision_net.mtu }}
 nmcli connection modify {{ bridge_bm }} 802-3-ethernet.mtu {{ baremetal_net.mtu }}
-nmcli connection up {{ bridge_prov }}.{{ kvmhost.baremetal_bridge_vlan }}
+nmcli connection up {{ bridge_prov }}.{{ baremetal_net.vlan }}
 
 exit 0
