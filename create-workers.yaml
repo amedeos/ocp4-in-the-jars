@@ -43,7 +43,7 @@
       - item.state == "present"
     with_items: "{{ worker_nodes }}"
 
-  - name: Defining the workers
+  - name: Defining worker VMs - virtualbmc
     shell: |
       virt-install --ram {{ worker.memory }} --vcpus {{ worker.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
@@ -52,9 +52,22 @@
     when:
       - not item.is_odf == "true"
       - item.state == "present"
+      - not redfish.enable|bool
+    with_items: "{{ worker_nodes }}"
+
+  - name: Defining worker VMs - redfish
+    shell: |
+      virt-install --ram {{ worker.memory }} --vcpus {{ worker.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virsh define /tmp/{{ item.name }}.xml
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    when:
+      - not item.is_odf == "true"
+      - item.state == "present"
+      - redfish.enable|bool
     with_items: "{{ worker_nodes }}"
   
-  - name: Defining the ODF workers
+  - name: Defining ODF worker VMs - virtualbmc
     shell: |
       virt-install --ram {{ worker.memory }} --vcpus {{ worker.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
@@ -63,6 +76,19 @@
     when:
       - item.is_odf == "true"
       - item.state == "present"
+      - not redfish.enable|bool
+    with_items: "{{ worker_nodes }}"
+
+  - name: Defining ODF worker VMs - redfish
+    shell: |
+      virt-install --ram {{ worker.memory }} --vcpus {{ worker.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virsh define /tmp/{{ item.name }}.xml
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    when:
+      - item.is_odf == "true"
+      - item.state == "present"
+      - redfish.enable|bool
     with_items: "{{ worker_nodes }}"
 
   # TODO: check ip address available in the hypervisor
@@ -74,5 +100,6 @@
     run_once: True
     when:
       - item.state == "present"
+      - not redfish.enable|bool
     with_items: "{{ worker_nodes }}"
 
