@@ -72,7 +72,19 @@
     run_once: True
     with_items: "{{ utility_nodes }}"
 
-  - name: Sleeping till ssh on utility vm is up
+  - name: Sleeping till ssh on utility vm is up - virtualbmc
+    wait_for:
+      port: 22
+      host: "{{ item.provisioning_ip }}"
+      delay: 20
+      timeout: 300
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+    when:
+      - not redfish.enable|bool
+
+  - name: Sleeping till ssh on utility vm is up - redfish
     wait_for:
       port: 22
       host: "{{ item.baremetal_ip }}"
@@ -81,6 +93,8 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ utility_nodes }}"
+    when:
+      - redfish.enable|bool
 
   - name: Remove temp directory for ssh key
     file:
@@ -115,7 +129,20 @@
     run_once: True
     with_items: "{{ utility_nodes }}"
 
-  - name: Update /etc/hosts with utility entry
+  - name: Update /etc/hosts with utility entry - virtualbmc
+    lineinfile:
+      path: /etc/hosts
+      backup: True
+      regexp: "{{ item.name }}.{{ domain }}"
+      line: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
+      state: present
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+    when:
+      - not redfish.enable|bool
+
+  - name: Update /etc/hosts with utility entry - redfish
     lineinfile:
       path: /etc/hosts
       backup: True
@@ -125,6 +152,8 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ utility_nodes }}"
+    when:
+      - redfish.enable|bool
 
   - name: Ensure .ssh directory is present
     file:
