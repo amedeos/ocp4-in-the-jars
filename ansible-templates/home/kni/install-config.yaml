@@ -37,6 +37,7 @@ platform:
         bmc:
 {% if redfish.enable == True  %}
           address: redfish-virtualmedia://{{ host.redfish_ip }}:{{ host.redfish_port }}/redfish/v1/Systems/{{ host.name }}
+          disableCertificateVerification: True
 {% else %}
           address: ipmi://{{ host.vbmc_ip }}:{{ host.vbmc_port }}
 {% endif %}
@@ -59,6 +60,7 @@ platform:
         bmc:
 {% if redfish.enable == True  %}
           address: redfish-virtualmedia://{{ host.redfish_ip }}:{{ host.redfish_port }}/redfish/v1/Systems/{{ host.name }}
+          disableCertificateVerification: True
 {% else %}
           address: ipmi://{{ host.vbmc_ip }}:{{ host.vbmc_port }}
 {% endif %}
