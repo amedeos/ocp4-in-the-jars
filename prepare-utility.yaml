@@ -33,13 +33,25 @@
     run_once: True
     with_items: "{{ utility_nodes }}"
 
-  - name: Defining the utility vm
+  - name: Defining the utility vm - virtualbmc
     shell: |
       virt-install --ram {{ utility.memory }} --vcpus {{ utility.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ utility_nodes }}"
+    when:
+      - not redfish.enable|bool
+
+  - name: Defining the utility vm - redfish
+    shell: |
+      virt-install --ram {{ utility.memory }} --vcpus {{ utility.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virsh define /tmp/{{ item.name }}.xml
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+    when:
+      - redfish.enable|bool
 
   # TODO: check ip address available in the hypervisor
   - name: Create virtualbmc interface
@@ -49,6 +61,8 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ utility_nodes }}"
+    when:
+      - not redfish.enable|bool
 
   - name: Starting utility vm
     virt:
@@ -61,7 +75,7 @@
   - name: Sleeping till ssh on utility vm is up
     wait_for:
       port: 22
-      host: "{{ item.provisioning_ip }}"
+      host: "{{ item.baremetal_ip }}"
       delay: 20
       timeout: 300
     delegate_to: "{{ item.hypervisor_name }}"
@@ -106,7 +120,7 @@
       path: /etc/hosts
       backup: True
       regexp: "{{ item.name }}.{{ domain }}"
-      line: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
+      line: "{{ item.baremetal_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
       state: present
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -163,7 +177,6 @@
         - utility
     with_items: "{{ utility_nodes }}"
     when: item.hypervisor_name == "localhost"
-
 
   - name: Write commodity hosts-utility-root file - no localhost
     copy:
