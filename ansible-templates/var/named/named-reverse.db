@@ -33,7 +33,3 @@ $TTL  1D
 {% endif %}
 {% endfor %}
 
-
-56        IN PTR worker-0.{{ domain }}.
-57        IN PTR worker-1.{{ domain }}.
-58        IN PTR worker-2.{{ domain }}.
