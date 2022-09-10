@@ -41,7 +41,7 @@
     when:
       - not redfish.enable|bool
 
-   - name: Defining master VMs - redfish
+  - name: Defining master VMs - redfish
     shell: |
       virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
