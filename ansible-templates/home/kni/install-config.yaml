@@ -19,12 +19,15 @@ platform:
     apiVIP: {{ vip.api }}
     ingressVIP: {{ vip.apps }}
     bootstrapOSImage: BOOTSTRAPOSIMAGE
+{% if redfish.enable == True  %}
+    provisioningNetwork: Disabled
+{% else %}
     provisioningNetworkCIDR: {{ provision_net.net }}/{{ provision_net.prefix }}
     provisioningNetworkInterface: {{ provision_net.net_interface }}
     provisioningBridge: "provisioning"
     provisioningDHCPRange: {{ provision_net.dhcp_start }},{{ provision_net.dhcp_end }}
     provisioningNetwork: Managed
-    #bootstrapProvisioningIP: 192.168.201.51
+{% endif %}
     externalBridge: "baremetal"
     hosts:
 {% for host in master_nodes %}
@@ -32,14 +35,21 @@ platform:
       - name: {{ host.name }}
         role: master
         bmc:
+{% if redfish.enable == True  %}
+          address: redfish-virtualmedia://{{ host.redfish_ip }}:{{ host.redfish_port }}/redfish/v1/Systems/{{ host.name }}
+{% else %}
           address: ipmi://{{ host.vbmc_ip }}:{{ host.vbmc_port }}
+{% endif %}
           username: admin
           password: {{ secure_password }}
+{% if redfish.enable == True  %}
+        bootMACAddress: {{ host.baremetal_mac }}
+{% else %}
         bootMACAddress: {{ host.provisioning_mac }}
+{% endif %}
         rootDeviceHints:
          deviceName: "/dev/vda"
         bootMode: legacy
-        #hardwareProfile: default
 {% endif %}
 {% endfor %}
 {% for host in worker_nodes %}
@@ -47,13 +57,20 @@ platform:
       - name: {{ host.name }}
         role: worker
         bmc:
+{% if redfish.enable == True  %}
+          address: redfish-virtualmedia://{{ host.redfish_ip }}:{{ host.redfish_port }}/redfish/v1/Systems/{{ host.name }}
+{% else %}
           address: ipmi://{{ host.vbmc_ip }}:{{ host.vbmc_port }}
+{% endif %}
           username: admin
           password: {{ secure_password }}
+{% if redfish.enable == True  %}
+        bootMACAddress: {{ host.baremetal_mac }}
+{% else %}
         bootMACAddress: {{ host.provisioning_mac }}
+{% endif %}
         rootDeviceHints:
          deviceName: "/dev/vda"
         bootMode: legacy
-        #hardwareProfile: default
 {% endif %}
 {% endfor %}
