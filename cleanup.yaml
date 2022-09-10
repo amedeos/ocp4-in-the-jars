@@ -219,6 +219,8 @@
       - "{{ utility_nodes }}"
       - "{{ master_nodes }}"
       - "{{ worker_nodes }}"
+    when:
+      - not redfish.enable|bool
 
   - name: Remove bastion from ssh/config file
     blockinfile:
@@ -232,11 +234,21 @@
     run_once: True
     with_items: "{{ bastion_nodes }}"
 
-  - name: Remote bastion entry in /etc/hosts
+  - name: Remote bastion entry in /etc/hosts - provisioning
     lineinfile:
       path: /etc/hosts
       backup: True
       regexp: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
+      state: absent
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+
+  - name: Remote bastion entry in /etc/hosts - baremetal
+    lineinfile:
+      path: /etc/hosts
+      backup: True
+      regexp: "{{ item.baremetal_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
       state: absent
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -254,11 +266,21 @@
     run_once: True
     with_items: "{{ utility_nodes }}"
 
-  - name: Remove utility entry in /etc/hosts
+  - name: Remove utility entry in /etc/hosts - provisioning
     lineinfile:
       path: /etc/hosts
       backup: True
       regexp: "{{ item.provisioning_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
+      state: absent
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ utility_nodes }}"
+
+  - name: Remove utility entry in /etc/hosts - baremetal
+    lineinfile:
+      path: /etc/hosts
+      backup: True
+      regexp: "{{ item.baremetal_ip }}\t{{ item.name }}.{{ domain }}\t{{ item.name }}"
       state: absent
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -273,3 +295,4 @@
     with_items:
       - "{{ ssh_key }}"
       - "{{ ssh_pub }}"
+
