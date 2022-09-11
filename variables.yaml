@@ -1,5 +1,5 @@
-bridge_prov: br0
-bridge_bm: br-2003
+bridge_prov: provisioning
+bridge_bm: baremetal
 libguestfs_path: /usr/share/guestfs/appliance/
 dns_ip_utility: 1.1.1.1
 redfish:
@@ -9,6 +9,7 @@ redfish:
   # set to all to listen on all IPs, instead set default to listen on default ip
   listen_ip: all
   auth_file: /etc/sushy-emulator/auth_file
+  enable_nat: True
 provision_net:
   net: 192.168.201.0
   netmask: 255.255.255.0
