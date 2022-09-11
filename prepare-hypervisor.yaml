@@ -109,6 +109,7 @@
     when:
       - kvmhost.provisioning_bridge_create|bool
       - kvmhost.provisioning_bridge_isolated|bool
+      - not redfish.enable|bool
 
   - name: Add vbmc_ip to provisioning bridge
     shell: |
@@ -122,6 +123,7 @@
       - kvmhost.provisioning_bridge_create|bool
       - not kvmhost.provisioning_bridge_isolated|bool
       - ansible_nodename == item.hypervisor_name
+      - not redfish.enable|bool
 
   - name: Create baremetal bridge - isolated
     nmcli:
@@ -261,16 +263,74 @@
       - ansible_distribution != "CentOS"
       - ansible_os_family == "RedHat"
 
-  - name: Instal virtualbmc
+  - name: Install virtualbmc
     dnf:
       name: python3-virtualbmc
       state: present
+    when:
+      - not redfish.enable|bool
 
   - name: Enable virtualbmc service
     systemd:
       name: virtualbmc.service
       state: started
       enabled: True
+    when:
+      - not redfish.enable|bool
+
+  - name: Install python3-sushy-tools
+    dnf:
+      name:
+        - python3-sushy-tools
+        - httpd-tools
+      state: present
+    when:
+      - redfish.enable|bool
+
+  - name: Create auth file for sushy-tools
+    shell: "htpasswd -c -B -b /etc/sushy-emulator/auth_file admin {{ secure_password }}"
+    when:
+      - redfish.enable|bool
+
+  - name: Ensure private key is present
+    openssl_privatekey:
+      path: /etc/sushy-emulator/sushy-tools.key
+      size: 2048
+      mode: 0640
+      owner: root
+      group: sushy-tools
+      type: RSA
+    when:
+      - redfish.enable|bool
+
+  - name: Ensure self-signed cert is present
+    openssl_certificate:
+      path: /etc/sushy-emulator/sushy-tools.crt
+      privatekey_path: /etc/sushy-emulator/sushy-tools.key
+      provider: selfsigned
+      selfsigned_not_after: "+3650d" # this is the default
+      mode: 0644
+    when:
+      - redfish.enable|bool
+
+  - name: Configure sushy-emulator.conf
+    template:
+      src: ansible-templates/etc/sushy-emulator/sushy-emulator.conf.j2
+      dest: /etc/sushy-emulator/sushy-emulator.conf
+      owner: root
+      group: sushy-tools
+      mode: 0640
+      backup: True
+    when:
+      - redfish.enable|bool
+
+  - name: Restart sushy-emulator service
+    systemd:
+      name: sushy-emulator.service
+      state: restarted
+      enabled: True
+    when:
+      - redfish.enable|bool
 
   - name: Remove centos-release-openstack-yoga.noarch
     shell: |
@@ -380,6 +440,7 @@
       - "{{ bastion_nodes }}"
     when:
       - kvmhost.provisioning_bridge_isolated|bool
+      - not redfish.enable|bool
 
   - name: Allow ipmi traffic to vbmc_ip
     iptables:
@@ -396,6 +457,7 @@
     when:
       - ansible_nodename == item.hypervisor_name
       - not kvmhost.provisioning_bridge_isolated|bool
+      - not redfish.enable|bool
 
   - name: Allow ipmi incoming traffic from provisioning network
     iptables:
@@ -404,13 +466,25 @@
       source: "{{ provision_net.net }}/{{ provision_net.prefix }}"
       destination_port: 623
       jump: ACCEPT
+    when:
+      - not redfish.enable|bool
+
+  - name: Allow redfish incoming traffic from baremetal network
+    iptables:
+      chain: INPUT
+      protocol: tcp
+      source: "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+      destination_port: 8000
+      jump: ACCEPT
+    when:
+      - redfish.enable|bool
 
   - name: Set the last rule as REJECT for INPUT
     iptables:
       chain: INPUT
       jump: REJECT
 
-  - name: enable source forward
+  - name: enable source forward - isolated
     iptables:
       chain: FORWARD
       source: "{{ item }}"
@@ -421,7 +495,18 @@
     when:
       - kvmhost.baremetal_bridge_isolated|bool
 
-  - name: enable destination forward
+  - name: enable baremetal source forward
+    iptables:
+      chain: FORWARD
+      source: "{{ item }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - redfish.enable|bool
+      - redfish.enable_nat|bool
+
+  - name: enable destination forward - isolated
     iptables:
       chain: FORWARD
       destination: "{{ item }}"
@@ -432,7 +517,18 @@
     when:
       - kvmhost.baremetal_bridge_isolated|bool
 
-  - name: enable MASQUERADING
+  - name: enable baremetal destination forward
+    iptables:
+      chain: FORWARD
+      destination: "{{ item }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - redfish.enable|bool
+      - redfish.enable_nat|bool
+
+  - name: enable MASQUERADING - isolated
     iptables:
       table: nat
       chain: POSTROUTING
@@ -443,6 +539,18 @@
       - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
     when:
       - kvmhost.baremetal_bridge_isolated|bool
+
+  - name: enable baremetal MASQUERADING
+    iptables:
+      table: nat
+      chain: POSTROUTING
+      source: "{{ item }}"
+      jump: MASQUERADE
+    with_items:
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - redfish.enable|bool
+      - redfish.enable_nat|bool
 
   - name: enable port forwarding for port 443
     iptables:
@@ -455,7 +563,7 @@
       jump: DNAT
     when:
       - kvmhost.enable_portfw|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool or ( redfish.enable|bool and redfish.enable_nat|bool )
 
   - name: enable port forwarding for port 6443
     iptables:
@@ -468,7 +576,7 @@
       jump: DNAT
     when:
       - kvmhost.enable_portfw|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool or ( redfish.enable|bool and redfish.enable_nat|bool )
 
   - name: Set the last rule as REJECT for FORWARD
     iptables:
@@ -653,7 +761,7 @@
     when:
       - enable_ddns_duckdns|bool
       - kvmhost.provisioning_bridge_isolated|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool or ( redfish.enable|bool and redfish.enable_nat|bool )
 
   - name: Create vimrc file
     template:
@@ -683,6 +791,5 @@
         - "#                                                                                   #"
         - "#####################################################################################"
     when:
-      - kvmhost.provisioning_bridge_isolated|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - ( kvmhost.baremetal_bridge_isolated|bool and kvmhost.provisioning_bridge_isolated|bool ) or ( redfish.enable|bool and redfish.enable_nat|bool )
 
