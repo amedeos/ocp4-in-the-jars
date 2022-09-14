@@ -65,6 +65,7 @@ kvmhost:
   provisioning_bridge_isolated: True
   baremetal_bridge_create: True
   baremetal_bridge_isolated: True
+  enable_baremetal_gw: False
 cluster_name: ocp-lab
 base_domain: example.com
 domain: "{{ cluster_name }}.{{ base_domain }}"

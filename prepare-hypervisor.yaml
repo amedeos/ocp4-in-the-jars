@@ -170,6 +170,14 @@
       - kvmhost.baremetal_bridge_create|bool
       - kvmhost.baremetal_bridge_isolated|bool
 
+  - name: Add baremetal ip
+    shell: |
+      nmcli connection modify {{ bridge_bm }} ipv4.method manual +ipv4.addresses {{ baremetal_ip }}/{{ baremetal_net.prefix }}
+    when:
+      - kvmhost.baremetal_bridge_create|bool
+      - baremetal_ip is defined
+      - kvmhost.enable_baremetal_gw|bool
+
   - name: Reboot after creating bridges
     reboot:
       reboot_timeout: "{{ kvmhost.reboot_timeout }}"
@@ -235,6 +243,15 @@
         - ipmitool
         - tree
       state: present
+
+  - name: Install keepalived
+    dnf:
+      name:
+        - keepalived
+      state: present
+    when:
+      - kvmhost.enable_baremetal_gw|bool
+      - baremetal_ip is defined
 
   - name: Install centos-release-ansible-29.noarch
     shell: |
@@ -332,12 +349,12 @@
     when:
       - redfish.enable|bool
 
-  - name: Remove centos-release-openstack-yoga.noarch
-    shell: |
-      dnf remove -y centos-release-openstack-yoga.noarch
-    when:
-      - ansible_distribution == "CentOS"
-      - ansible_distribution_release == "Stream"
+  #- name: Remove centos-release-openstack-yoga.noarch
+  #  shell: |
+  #    dnf remove -y centos-release-openstack-yoga.noarch
+  #  when:
+  #    - ansible_distribution == "CentOS"
+  #    - ansible_distribution_release == "Stream"
 
   - name: Remove rdo-release
     shell: |
@@ -478,6 +495,15 @@
       jump: ACCEPT
     when:
       - redfish.enable|bool
+
+  - name: Allow VRRP protocol
+    iptables:
+      chain: INPUT
+      protocol: vrrp
+      source: "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+      jump: ACCEPT
+    when:
+      - kvmhost.enable_baremetal_gw
 
   - name: Set the last rule as REJECT for INPUT
     iptables:
@@ -697,6 +723,41 @@
       state: restarted
       name: libvirtd
       enabled: yes
+
+  - name: Generate rand password
+    shell: |
+      openssl rand -hex 20
+    run_once: True
+    register: rand_password
+    when:
+      - insecure_password is not defined
+      - kvmhost.enable_baremetal_gw
+
+  - name: Set insecure_password
+    set_fact:
+      insecure_password: "{{ rand_password.stdout }}"
+    when:
+      - insecure_password is not defined
+      - kvmhost.enable_baremetal_gw
+
+  - name: Configure keepalived
+    template:
+      src: ansible-templates/etc/keepalived/keepalived.conf.j2
+      dest: /etc/keepalived/keepalived.conf
+      backup: True
+      mode: 0644
+      owner: root
+      group: root
+    when:
+      - kvmhost.enable_baremetal_gw
+
+  - name: Restart keepalived
+    systemd:
+      name: keepalived.service
+      state: restarted
+      enabled: True
+    when:
+      - kvmhost.enable_baremetal_gw
 
   - name: clone repo
     shell: |
