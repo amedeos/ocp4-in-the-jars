@@ -5,6 +5,12 @@
     - variables.yaml
     - bm-ansible-nodes.json
   tasks:
+  - name: Set hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+    when:
+      - kvmhost.set_hostname|bool
+
   - name: Upgrade to latest version
     dnf:
       name: "*"
@@ -253,18 +259,18 @@
       - kvmhost.enable_baremetal_gw|bool
       - baremetal_ip is defined
 
-  - name: Install centos-release-ansible-29.noarch
-    shell: |
-      dnf install -y centos-release-ansible-29.noarch
-    when:
-      - ansible_distribution == "CentOS"
-      - ansible_distribution_release == "Stream"
+  #- name: Install centos-release-ansible-29.noarch
+  #  shell: |
+  #    dnf install -y centos-release-ansible-29.noarch
+  #  when:
+  #    - ansible_distribution == "CentOS"
+  #    - ansible_distribution_release == "Stream"
 
-  - name: Install ansible
-    dnf:
-      name:
-        - ansible
-      state: present
+  #- name: Install ansible
+  #  dnf:
+  #    name:
+  #      - ansible
+  #    state: present
 
   - name: Install centos-release-openstack-yoga.noarch
     shell: |
@@ -303,6 +309,12 @@
       state: present
     when:
       - redfish.enable|bool
+
+  - name: Install ansible
+    dnf:
+      name:
+        - ansible
+      state: present
 
   - name: Create auth file for sushy-tools
     shell: "htpasswd -c -B -b /etc/sushy-emulator/auth_file admin {{ secure_password }}"
@@ -356,12 +368,12 @@
   #    - ansible_distribution == "CentOS"
   #    - ansible_distribution_release == "Stream"
 
-  - name: Remove rdo-release
-    shell: |
-      dnf remove -y rdo-release
-    when:
-      - ansible_distribution != "CentOS"
-      - ansible_os_family == "RedHat"
+  #- name: Remove rdo-release
+  #  shell: |
+  #    dnf remove -y rdo-release
+  #  when:
+  #    - ansible_distribution != "CentOS"
+  #    - ansible_os_family == "RedHat"
 
   - name: Clean dnf cache
     shell: |
