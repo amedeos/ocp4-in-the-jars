@@ -1,5 +1,5 @@
-bridge_prov: provisioning
-bridge_bm: baremetal
+bridge_prov: prov
+bridge_bm: bm
 libguestfs_path: /usr/share/guestfs/appliance/
 dns_ip_utility: 1.1.1.1
 redfish:
@@ -66,6 +66,7 @@ kvmhost:
   baremetal_bridge_create: True
   baremetal_bridge_isolated: True
   enable_baremetal_gw: False
+  set_hostname: True
 cluster_name: ocp-lab
 base_domain: example.com
 domain: "{{ cluster_name }}.{{ base_domain }}"
