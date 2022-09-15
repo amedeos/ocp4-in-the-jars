@@ -24,7 +24,9 @@ nmcli connection modify {{ bridge_prov }} ipv4.method manual
 nmcli connection modify {{ bridge_prov }} ipv4.addresses {{ ansible_default_ipv4.address }}/{{ ansible_default_ipv4.prefix }}
 nmcli connection modify {{ bridge_prov }} ipv4.gateway {{ ansible_default_ipv4.gateway }}
 nmcli connection modify {{ bridge_prov }} ipv4.dns {{ ansible_dns.nameservers[0] }}
+{% if ansible_dns.search is defined and ansible_dns.search %}
 nmcli connection modify {{ bridge_prov }} ipv4.dns-search {{ ansible_dns.search[0] }}
+{% endif %}
 nmcli connection modify {{ bridge_prov }} ipv6.method ignore
 nmcli connection modify {{ bridge_prov }} ipv4.method manual
 nmcli connection modify {{ bridge_prov }} ipv4.method manual
