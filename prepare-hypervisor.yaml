@@ -736,6 +736,52 @@
       name: libvirtd
       enabled: yes
 
+  - name: Check if pool default is present
+    shell: |
+      virsh pool-list | egrep '\s+default'
+    register: pool_default
+    failed_when: pool_default.rc|float > 100
+    when:
+      - redfish.enable|bool
+
+  - name: Create template for default pool
+    template:
+      src: ansible-templates/root/default_pool.xml.j2
+      dest: /root/default_pool.xml
+      owner: root
+      group: root
+      mode: 0644
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
+  - name: Create template for default pool
+    template:
+      src: ansible-templates/root/default_pool.sh
+      dest: /root/default_pool.sh
+      owner: root
+      group: root
+      mode: 0755
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
+  - name: Define default pool
+    shell: |
+      nohup /root/default_pool.sh
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
+  - name: Restart Libvirtd Service
+    systemd:
+      state: restarted
+      name: libvirtd
+      enabled: yes
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
   - name: Generate rand password
     shell: |
       openssl rand -hex 20
