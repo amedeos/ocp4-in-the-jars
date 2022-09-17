@@ -316,6 +316,14 @@
         - ansible
       state: present
 
+  - name: Add sushy-tools user to libvirt group
+    user:
+      name: sushy-tools
+      groups: libvirt
+      append: True
+    when:
+      - redfish.enable|bool
+
   - name: Create auth file for sushy-tools
     shell: "htpasswd -c -B -b /etc/sushy-emulator/auth_file admin {{ secure_password }}"
     when:
