@@ -5,6 +5,12 @@
     - variables.yaml
     - bm-ansible-nodes.json
   tasks:
+  - name: Set hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+    when:
+      - kvmhost.set_hostname|bool
+
   - name: Upgrade to latest version
     dnf:
       name: "*"
@@ -109,6 +115,7 @@
     when:
       - kvmhost.provisioning_bridge_create|bool
       - kvmhost.provisioning_bridge_isolated|bool
+      - not redfish.enable|bool
 
   - name: Add vbmc_ip to provisioning bridge
     shell: |
@@ -122,6 +129,7 @@
       - kvmhost.provisioning_bridge_create|bool
       - not kvmhost.provisioning_bridge_isolated|bool
       - ansible_nodename == item.hypervisor_name
+      - not redfish.enable|bool
 
   - name: Create baremetal bridge - isolated
     nmcli:
@@ -167,6 +175,14 @@
     when:
       - kvmhost.baremetal_bridge_create|bool
       - kvmhost.baremetal_bridge_isolated|bool
+
+  - name: Add baremetal ip
+    shell: |
+      nmcli connection modify {{ bridge_bm }} ipv4.method manual +ipv4.addresses {{ baremetal_ip }}/{{ baremetal_net.prefix }}
+    when:
+      - kvmhost.baremetal_bridge_create|bool
+      - baremetal_ip is defined
+      - kvmhost.enable_baremetal_gw|bool
 
   - name: Reboot after creating bridges
     reboot:
@@ -234,18 +250,27 @@
         - tree
       state: present
 
-  - name: Install centos-release-ansible-29.noarch
-    shell: |
-      dnf install -y centos-release-ansible-29.noarch
-    when:
-      - ansible_distribution == "CentOS"
-      - ansible_distribution_release == "Stream"
-
-  - name: Install ansible
+  - name: Install keepalived
     dnf:
       name:
-        - ansible
+        - keepalived
       state: present
+    when:
+      - kvmhost.enable_baremetal_gw|bool
+      - baremetal_ip is defined
+
+  #- name: Install centos-release-ansible-29.noarch
+  #  shell: |
+  #    dnf install -y centos-release-ansible-29.noarch
+  #  when:
+  #    - ansible_distribution == "CentOS"
+  #    - ansible_distribution_release == "Stream"
+
+  #- name: Install ansible
+  #  dnf:
+  #    name:
+  #      - ansible
+  #    state: present
 
   - name: Install centos-release-openstack-yoga.noarch
     shell: |
@@ -261,30 +286,102 @@
       - ansible_distribution != "CentOS"
       - ansible_os_family == "RedHat"
 
-  - name: Instal virtualbmc
+  - name: Install virtualbmc
     dnf:
       name: python3-virtualbmc
       state: present
+    when:
+      - not redfish.enable|bool
 
   - name: Enable virtualbmc service
     systemd:
       name: virtualbmc.service
       state: started
       enabled: True
-
-  - name: Remove centos-release-openstack-yoga.noarch
-    shell: |
-      dnf remove -y centos-release-openstack-yoga.noarch
     when:
-      - ansible_distribution == "CentOS"
-      - ansible_distribution_release == "Stream"
+      - not redfish.enable|bool
 
-  - name: Remove rdo-release
-    shell: |
-      dnf remove -y rdo-release
+  - name: Install python3-sushy-tools
+    dnf:
+      name:
+        - python3-sushy-tools
+        - httpd-tools
+      state: present
     when:
-      - ansible_distribution != "CentOS"
-      - ansible_os_family == "RedHat"
+      - redfish.enable|bool
+
+  - name: Install ansible
+    dnf:
+      name:
+        - ansible
+      state: present
+
+  - name: Add sushy-tools user to libvirt group
+    user:
+      name: sushy-tools
+      groups: libvirt
+      append: True
+    when:
+      - redfish.enable|bool
+
+  - name: Create auth file for sushy-tools
+    shell: "htpasswd -c -B -b /etc/sushy-emulator/auth_file admin {{ secure_password }}"
+    when:
+      - redfish.enable|bool
+
+  - name: Ensure private key is present
+    openssl_privatekey:
+      path: /etc/sushy-emulator/sushy-tools.key
+      size: 2048
+      mode: 0640
+      owner: root
+      group: sushy-tools
+      type: RSA
+    when:
+      - redfish.enable|bool
+
+  - name: Ensure self-signed cert is present
+    openssl_certificate:
+      path: /etc/sushy-emulator/sushy-tools.crt
+      privatekey_path: /etc/sushy-emulator/sushy-tools.key
+      provider: selfsigned
+      selfsigned_not_after: "+3650d" # this is the default
+      mode: 0644
+    when:
+      - redfish.enable|bool
+
+  - name: Configure sushy-emulator.conf
+    template:
+      src: ansible-templates/etc/sushy-emulator/sushy-emulator.conf.j2
+      dest: /etc/sushy-emulator/sushy-emulator.conf
+      owner: root
+      group: sushy-tools
+      mode: 0640
+      backup: True
+    when:
+      - redfish.enable|bool
+
+  - name: Restart sushy-emulator service
+    systemd:
+      name: sushy-emulator.service
+      state: restarted
+      enabled: True
+    when:
+      - redfish.enable|bool
+
+  #- name: Remove centos-release-openstack-yoga.noarch
+  #  shell: |
+  #    dnf remove -y centos-release-openstack-yoga.noarch
+  #  when:
+  #    - ansible_distribution == "CentOS"
+  #    - ansible_distribution_release == "Stream"
+
+  #- name: Remove rdo-release
+  #  shell: |
+  #    dnf remove -y rdo-release
+  #  when:
+  #    - ansible_distribution != "CentOS"
+  #    - ansible_os_family == "RedHat"
 
   - name: Clean dnf cache
     shell: |
@@ -380,6 +477,7 @@
       - "{{ bastion_nodes }}"
     when:
       - kvmhost.provisioning_bridge_isolated|bool
+      - not redfish.enable|bool
 
   - name: Allow ipmi traffic to vbmc_ip
     iptables:
@@ -396,6 +494,7 @@
     when:
       - ansible_nodename == item.hypervisor_name
       - not kvmhost.provisioning_bridge_isolated|bool
+      - not redfish.enable|bool
 
   - name: Allow ipmi incoming traffic from provisioning network
     iptables:
@@ -404,13 +503,34 @@
       source: "{{ provision_net.net }}/{{ provision_net.prefix }}"
       destination_port: 623
       jump: ACCEPT
+    when:
+      - not redfish.enable|bool
+
+  - name: Allow redfish incoming traffic from baremetal network
+    iptables:
+      chain: INPUT
+      protocol: tcp
+      source: "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+      destination_port: 8000
+      jump: ACCEPT
+    when:
+      - redfish.enable|bool
+
+  - name: Allow VRRP protocol
+    iptables:
+      chain: INPUT
+      protocol: vrrp
+      source: "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+      jump: ACCEPT
+    when:
+      - kvmhost.enable_baremetal_gw
 
   - name: Set the last rule as REJECT for INPUT
     iptables:
       chain: INPUT
       jump: REJECT
 
-  - name: enable source forward
+  - name: enable source forward - isolated
     iptables:
       chain: FORWARD
       source: "{{ item }}"
@@ -421,7 +541,18 @@
     when:
       - kvmhost.baremetal_bridge_isolated|bool
 
-  - name: enable destination forward
+  - name: enable baremetal source forward
+    iptables:
+      chain: FORWARD
+      source: "{{ item }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - redfish.enable|bool
+      - redfish.enable_nat|bool
+
+  - name: enable destination forward - isolated
     iptables:
       chain: FORWARD
       destination: "{{ item }}"
@@ -432,7 +563,18 @@
     when:
       - kvmhost.baremetal_bridge_isolated|bool
 
-  - name: enable MASQUERADING
+  - name: enable baremetal destination forward
+    iptables:
+      chain: FORWARD
+      destination: "{{ item }}"
+      jump: ACCEPT
+    with_items:
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - redfish.enable|bool
+      - redfish.enable_nat|bool
+
+  - name: enable MASQUERADING - isolated
     iptables:
       table: nat
       chain: POSTROUTING
@@ -444,31 +586,49 @@
     when:
       - kvmhost.baremetal_bridge_isolated|bool
 
+  - name: enable baremetal MASQUERADING
+    iptables:
+      table: nat
+      chain: POSTROUTING
+      source: "{{ item }}"
+      jump: MASQUERADE
+    with_items:
+      - "{{ baremetal_net.net }}/{{ baremetal_net.prefix }}"
+    when:
+      - redfish.enable|bool
+      - redfish.enable_nat|bool
+
   - name: enable port forwarding for port 443
     iptables:
       table: nat
       chain: PREROUTING
-      in_interface: "{{ ansible_default_ipv4.interface }}"
+      in_interface: "{{ item }}"
       protocol: tcp
       to_destination: "{{ vip.apps }}:443"
       destination_port: 443
       jump: DNAT
+    with_items:
+      - "{{ ansible_default_ipv4.interface }}"
+      - "{{ bridge_prov }}"
     when:
       - kvmhost.enable_portfw|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool or ( redfish.enable|bool and redfish.enable_nat|bool )
 
   - name: enable port forwarding for port 6443
     iptables:
       table: nat
       chain: PREROUTING
-      in_interface: "{{ ansible_default_ipv4.interface }}"
+      in_interface: "{{ item }}"
       protocol: tcp
       to_destination: "{{ vip.api }}:6443"
       destination_port: 6443
       jump: DNAT
+    with_items:
+      - "{{ ansible_default_ipv4.interface }}"
+      - "{{ bridge_prov }}"
     when:
       - kvmhost.enable_portfw|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool or ( redfish.enable|bool and redfish.enable_nat|bool )
 
   - name: Set the last rule as REJECT for FORWARD
     iptables:
@@ -590,6 +750,87 @@
       name: libvirtd
       enabled: yes
 
+  - name: Check if pool default is present
+    shell: |
+      virsh pool-list | egrep '\s+default'
+    register: pool_default
+    failed_when: pool_default.rc|float > 100
+    when:
+      - redfish.enable|bool
+
+  - name: Create template for default pool
+    template:
+      src: ansible-templates/root/default_pool.xml.j2
+      dest: /root/default_pool.xml
+      owner: root
+      group: root
+      mode: 0644
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
+  - name: Create template for default pool
+    template:
+      src: ansible-templates/root/default_pool.sh
+      dest: /root/default_pool.sh
+      owner: root
+      group: root
+      mode: 0755
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
+  - name: Define default pool
+    shell: |
+      nohup /root/default_pool.sh
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
+  - name: Restart Libvirtd Service
+    systemd:
+      state: restarted
+      name: libvirtd
+      enabled: yes
+    when:
+      - redfish.enable|bool
+      - pool_default.rc|float > 0
+
+  - name: Generate rand password
+    shell: |
+      openssl rand -hex 20
+    run_once: True
+    register: rand_password
+    when:
+      - insecure_password is not defined
+      - kvmhost.enable_baremetal_gw
+
+  - name: Set insecure_password
+    set_fact:
+      insecure_password: "{{ rand_password.stdout }}"
+    when:
+      - insecure_password is not defined
+      - kvmhost.enable_baremetal_gw
+
+  - name: Configure keepalived
+    template:
+      src: ansible-templates/etc/keepalived/keepalived.conf.j2
+      dest: /etc/keepalived/keepalived.conf
+      backup: True
+      mode: 0644
+      owner: root
+      group: root
+    when:
+      - kvmhost.enable_baremetal_gw
+
+  - name: Restart keepalived
+    systemd:
+      name: keepalived.service
+      state: restarted
+      enabled: True
+    when:
+      - kvmhost.enable_baremetal_gw
+
   - name: clone repo
     shell: |
       cd /root
@@ -653,7 +894,7 @@
     when:
       - enable_ddns_duckdns|bool
       - kvmhost.provisioning_bridge_isolated|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - kvmhost.baremetal_bridge_isolated|bool or ( redfish.enable|bool and redfish.enable_nat|bool )
 
   - name: Create vimrc file
     template:
@@ -683,6 +924,5 @@
         - "#                                                                                   #"
         - "#####################################################################################"
     when:
-      - kvmhost.provisioning_bridge_isolated|bool
-      - kvmhost.baremetal_bridge_isolated|bool
+      - ( kvmhost.baremetal_bridge_isolated|bool and kvmhost.provisioning_bridge_isolated|bool ) or ( redfish.enable|bool and redfish.enable_nat|bool )
 

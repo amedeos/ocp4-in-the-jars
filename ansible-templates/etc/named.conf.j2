@@ -7,7 +7,11 @@ options {
         memstatistics-file "/var/named/data/named_mem_stats.txt";
         secroots-file "/var/named/data/named.secroots";
         recursing-file "/var/named/data/named.recursing";
+{% if redfish.enable == True  %}
+        allow-query { localhost; {{ baremetal_net.net }}/{{ baremetal_net.prefix }}; };
+{% else %}
         allow-query { localhost; {{ provision_net.net }}/{{ provision_net.prefix }}; {{ baremetal_net.net }}/{{ baremetal_net.prefix }}; };
+{% endif %}
         recursion yes;
         dnssec-enable yes;
         dnssec-validation yes;

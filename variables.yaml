@@ -1,7 +1,15 @@
-bridge_prov: br0
-bridge_bm: br-2003
+bridge_prov: prov
+bridge_bm: bm
 libguestfs_path: /usr/share/guestfs/appliance/
 dns_ip_utility: 1.1.1.1
+redfish:
+  enable: True
+  config_file: /etc/sushy-emulator/sushy-emulator.conf
+  listen_port: 8000
+  # set to all to listen on all IPs, instead set default to listen on default ip
+  listen_ip: all
+  auth_file: /etc/sushy-emulator/auth_file
+  enable_nat: True
 provision_net:
   net: 192.168.201.0
   netmask: 255.255.255.0
@@ -57,6 +65,8 @@ kvmhost:
   provisioning_bridge_isolated: True
   baremetal_bridge_create: True
   baremetal_bridge_isolated: True
+  enable_baremetal_gw: False
+  set_hostname: True
 cluster_name: ocp-lab
 base_domain: example.com
 domain: "{{ cluster_name }}.{{ base_domain }}"

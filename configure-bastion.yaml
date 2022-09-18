@@ -153,7 +153,7 @@
 
   - name: Execute baremetal-net.sh
     shell: |
-      nohup /root/baremetal-net.sh
+      nohup /root/baremetal-net.sh &
     become: True
 
   - name: Create provisioning-net.sh
@@ -164,11 +164,15 @@
       group: root
       mode: 0755
     become: True
+    when:
+      - not redfish.enable|bool
 
   - name: Execute provisioning-net.sh
     shell: |
       nohup /root/provisioning-net.sh &
     become: True
+    when:
+      - not redfish.enable|bool
 
   - name: Reboot bastion
     reboot:
@@ -203,25 +207,7 @@
     shell: |
       podman stop rhcos_image_cache
       podman rm rhcos_image_cache
-      #podman run -d --name rhcos_image_cache -v /home/kni/rhcos_image_cache:/var/www/html -p 8080:8080/tcp registry.centos.org/centos/httpd-24-centos7:latest
       podman run -d --name rhcos_image_cache -v /home/kni/rhcos_image_cache:/var/www/html -p 8080:8080/tcp quay.io/centos7/httpd-24-centos7:latest
-
-  #- name: Create md5sum file and osimage.txt
-  #  shell: |
-  #    export COMMIT_ID=$(/usr/bin/openshift-baremetal-install version | grep '^built from commit' | awk '{print $4}')
-  #    export RHCOS_OPENSTACK_URI=$(curl -s -S https://raw.githubusercontent.com/openshift/installer/$COMMIT_ID/data/data/rhcos.json  | jq .images.openstack.path | sed 's/"//g')
-  #    export RHCOS_QEMU_URI=$(curl -s -S https://raw.githubusercontent.com/openshift/installer/$COMMIT_ID/data/data/rhcos.json  | jq .images.qemu.path | sed 's/"//g')
-  #    export RHCOS_PATH=$(curl -s -S https://raw.githubusercontent.com/openshift/installer/$COMMIT_ID/data/data/rhcos.json | jq .baseURI | sed 's/"//g')
-  #    export RHCOS_QEMU_SHA_UNCOMPRESSED=$(curl -s -S https://raw.githubusercontent.com/openshift/installer/$COMMIT_ID/data/data/rhcos.json  | jq -r '.images.qemu["uncompressed-sha256"]')
-  #    export RHCOS_OPENSTACK_SHA_COMPRESSED=$(curl -s -S https://raw.githubusercontent.com/openshift/installer/$COMMIT_ID/data/data/rhcos.json  | jq -r '.images.openstack.sha256')
-  #    export BAREMETAL_IP=$(ip addr show dev baremetal | awk '/inet /{print $2}' | cut -d"/" -f1)
-  #    export RHCOS_OPENSTACK_SHA256=$(zcat /home/kni/rhcos_image_cache/${RHCOS_OPENSTACK_URI} | sha256sum | awk '{print $1}')
-  #    export RHCOS_QEMU_SHA256=$(zcat /home/kni/rhcos_image_cache/${RHCOS_QEMU_URI} | sha256sum | awk '{print $1}')
-  #    export CLUSTER_OS_IMAGE="http://${BAREMETAL_IP}:8080/${RHCOS_OPENSTACK_URI}?sha256=${RHCOS_OPENSTACK_SHA256}"
-  #    export BOOTSTRAP_OS_IMAGE="http://${BAREMETAL_IP}:8080/${RHCOS_QEMU_URI}?sha256=${RHCOS_QEMU_SHA256}"
-  #    echo "${RHCOS_OPENSTACK_SHA256}  ${RHCOS_OPENSTACK_URI}" > /home/kni/rhcos_image_cache/rhcos-ootpa-latest.qcow2.md5sum
-  #    echo "    bootstrapOSImage: ${BOOTSTRAP_OS_IMAGE}" > /home/kni/osimage.txt
-  #    echo "    clusterOSImage: ${CLUSTER_OS_IMAGE}" >> /home/kni/osimage.txt
 
   - name: Create openshift-baremetal-install completion bash
     shell: |

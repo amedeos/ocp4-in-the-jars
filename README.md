@@ -33,60 +33,72 @@ Your Linux NUC hosts require the following **packages** installed and working:
 - qemu
 - nested virtualization
 - libguestfs
-- virtualbmc
+- virtualbmc or sushy-tools
 - ssh
 
 there is no constraint on which Linux distribution to use, for example, I use Gentoo, but you can use RHEL 8, CentOS Stream 8, Ubuntu, Arch... for example to set up a similar project on a Cloud dedicated CentOS Stream 8 server I used this Ansible playbook:
 
 [prepare-hypervisor.yaml](prepare-hypervisor.yaml)
 
-if you use Gentoo, like me, you can simply install the required packages from the Portage and virtualbmc from my overlay "amedeos"
+if you use Gentoo, like me, you can simply install the required packages from the Portage and virtualbmc or sushy-tools, from my overlay "amedeos"
 
 ### Layer2 and Layer3
 In my homelab I used a layer2+layer3 switch from Netgear, its very simple and cheaper managed switch (I paid for Netgear GS108TV3 ~70 bucks), but remember, if you want to use more than one NUC, you will need to connect all your hosts to one switch in order to use the required networks.
 
-The Ansible Playbooks will use two Linux bridges for OpenShift, which is **br0** for provisioning network (must be native VLAN), and **br-2003** for baremetal network, this could be a VLAN (in my case VLAN 2003), but you can adapt to your needs.
+#### Only baremetal network
+The Ansible Playbooks, by default, will use only one Linux bridge for OpenShift, which is **bm** for baremetal network (could be native VLAN or tagged by your hypervisor). If you want to use only baremetal network, you have to setup **sushy-tools** on each NUC host in order to simulate redfish emulator.
 
-For example, if you have, like me, only one network adapter, and you want to create two bridges, br0 and br-2003, where br0 has the primary IP in a native VLAN and br-2003 is connected to the same link (in my case eno1) but with the VLAN 2003 you have to:
+Example configuration for your L2+L3 switch with baremetal network:
+
+| VLAN | Name | Subnet | Native | Bridge | Gateway |
+| ---- | ---- | ------ | ------ | ------ | ------- |
+| 2003 | Baremetal | 192.168.203.0/24 | | bm | 192.168.203.1 |
+
+#### Provisioning and baremetal networks
+In this case, you'll use both provisioning and baremetal networks using two Linux bridges for OpenShift, which is **prov** for provisioning network (must be native VLAN), and **bm** for baremetal network, this could be a VLAN (in my case VLAN 2003), but you can adapt to your needs. If you want to use both provisioning and baremetal networks, you have to set up **virtualbmc** on each NUC host in order to use ipmi emulator.
+
+For example, if you have, like me, only one network adapter, and you want to create two bridges, prov and bm, where prov has the primary IP in a native VLAN and bm is connected to the same link (in my case eno1) but with the VLAN 2003 you have to:
 
 - configure your L2+L3 switch with both VLANs, where the provisioning VLAN is native:
 
 | VLAN | Name | Subnet | Native | Bridge | Gateway |
 | ---- | ---- | ------ | ------ | ------ | ------- |
-| 2001 | Provisioning | 192.168.201.0/24 | True | br0 | 192.168.201.1 |
-| 2003 | Baremetal | 192.168.203.0/24 | | br-2003 | 192.168.203.1 |
+| 2001 | Provisioning | 192.168.201.0/24 | True | prov | 192.168.201.1 |
+| 2003 | Baremetal | 192.168.203.0/24 | | bm | 192.168.203.1 |
 
+#### Example bridges configuration
+Below you can find some linux bridges configuration.
 
-- configure your Linux KVM host with **br0** bridge attached to your interface:
+- configure your Linux KVM host with **prov** bridge attached to your interface:
 
 ```bash
-$ nmcli connection add ifname br0 type bridge con-name br0
-$ nmcli connection add type bridge-slave ifname eno1 master br0
-$ nmcli connection modify br0 bridge.stp no
-$ nmcli connection modify br0 ipv4.addresses 192.168.201.110/24
-$ nmcli connection modify br0 ipv4.gateway 192.168.201.1
-$ nmcli connection modify br0 ipv4.dns '1.1.1.1'
-$ nmcli connection modify br0 ipv4.dns-search 'example.com'
-$ nmcli connection modify br0 ipv4.method manual
-$ nmcli connection down br0 ; nmcli connection up br0
+$ nmcli connection add ifname prov type bridge con-name prov
+$ nmcli connection add type bridge-slave ifname eno1 master prov
+$ nmcli connection modify prov bridge.stp no
+$ nmcli connection modify prov ipv4.addresses 192.168.201.110/24
+$ nmcli connection modify prov ipv4.gateway 192.168.201.1
+$ nmcli connection modify prov ipv4.dns '1.1.1.1'
+$ nmcli connection modify prov ipv4.dns-search 'example.com'
+$ nmcli connection modify prov ipv4.method manual
+$ nmcli connection down prov ; nmcli connection up prov
 ```
 
-- configure your Linux KVM host with **br-2003** bridge using VLAN id 2003:
+- configure your Linux KVM host with **bm** bridge using VLAN id 2003:
 
 ```bash
-$ nmcli connection add ifname br-2003 type bridge con-name br-2003
-$ nmcli connection modify br-2003 ipv4.method disabled ipv6.method ignore
-$ nmcli connection up br-2003
-$ nmcli connection add type vlan con-name br0.2003 ifname br0.2003 dev br0 id 2003
-$ nmcli connection modify br0.2003 master br-2003 slave-type bridge
-$ nmcli connection down br0.2003 ; nmcli connection up br-2003
+$ nmcli connection add ifname bm type bridge con-name bm
+$ nmcli connection modify bm ipv4.method disabled ipv6.method ignore
+$ nmcli connection up bm
+$ nmcli connection add type vlan con-name prov.2003 ifname prov.2003 dev prov id 2003
+$ nmcli connection modify prov.2003 master bm slave-type bridge
+$ nmcli connection down prov.2003 ; nmcli connection up bm
 ```
 
-- add to your KVM host all additional IPMI IP to br0:
+- add to your KVM host all additional IPMI IP to prov:
 ```bash
-$ nmcli connection modify br0 +ipv4.addresses 192.168.201.111/24
-$ nmcli connection modify br0 +ipv4.addresses 192.168.201.112/24
-$ nmcli connection modify br0 +ipv4.addresses 192.168.201.113/24
+$ nmcli connection modify prov +ipv4.addresses 192.168.201.111/24
+$ nmcli connection modify prov +ipv4.addresses 192.168.201.112/24
+$ nmcli connection modify prov +ipv4.addresses 192.168.201.113/24
 ...
 ```
 
@@ -175,6 +187,8 @@ otherwise, if you want to deploy the master-2 on the NUC host **pippo02.example.
             "vbmc_pre_cmd": "",
             "vbmc_ip": "192.168.201.104",
             "vbmc_port": "623",
+            "redfish_ip": "192.168.203.1",
+            "redfish_port": "8000",
             "baremetal_ip": "192.168.203.55",
             "baremetal_last": "55"
         }

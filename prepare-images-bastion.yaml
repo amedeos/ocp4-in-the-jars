@@ -117,7 +117,7 @@
     run_once: True
     with_items: "{{ bastion_nodes }}"
 
-  - name: Create /tmp/ifcfg-eth0 for RHEL8
+  - name: Create /tmp/ifcfg-eth0 for RHEL8 - virtualbmc
     copy:
       dest: /tmp/ifcfg-eth0
       mode: '0644'
@@ -132,8 +132,10 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
+    when:
+      - not redfish.enable|bool
 
-  - name: Create /tmp/ifcfg-eth1 for RHEL8
+  - name: Create /tmp/ifcfg-eth1 for RHEL8 - virtualbmc
     copy:
       dest: /tmp/ifcfg-eth1
       mode: '0644'
@@ -149,8 +151,30 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
+    when:
+      - not redfish.enable|bool
 
-  - name: Copying Config files to the rhel8 bastion image
+  - name: Create /tmp/ifcfg-eth0 for RHEL8 - redfish
+    copy:
+      dest: /tmp/ifcfg-eth0
+      mode: '0644'
+      content: |
+        DEVICE=eth0
+        TYPE=Ethernet
+        IPADDR={{ bastion_nodes[0].baremetal_ip }}
+        GATEWAY={{ baremetal_net.gateway }}
+        NETMASK={{ baremetal_net.netmask }}
+        MTU={{ baremetal_net.mtu }}
+        ONBOOT=yes
+        NM_CONTROLLED=yes
+        DNS1={{ utility_nodes[0].baremetal_ip }}
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+    when:
+      - redfish.enable|bool
+
+  - name: Copying Config files to the rhel8 bastion image - virtualbmc
     shell: |
       virt-copy-in -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-bastion.qcow2 /tmp/ifcfg-eth0 /tmp/ifcfg-eth1 /etc/sysconfig/network-scripts/
     environment:
@@ -158,13 +182,39 @@
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
-    when: not ansible_os_family == "RedHat"
+    when:
+      - not ansible_os_family == "RedHat"
+      - not redfish.enable|bool
 
-  - name: Copying Config files to the rhel8 bastion image
+  - name: Copying Config files to the rhel8 bastion image - virtualbmc
     shell: |
       virt-copy-in -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-bastion.qcow2 /tmp/ifcfg-eth0 /tmp/ifcfg-eth1 /etc/sysconfig/network-scripts/
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
-    when: ansible_os_family == "RedHat"
+    when:
+      - ansible_os_family == "RedHat"
+      - not redfish.enable|bool
+
+  - name: Copying Config files to the rhel8 bastion image - redfish
+    shell: |
+      virt-copy-in -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-bastion.qcow2 /tmp/ifcfg-eth0 /etc/sysconfig/network-scripts/
+    environment:
+      LIBGUESTFS_PATH: "{{ libguestfs_path }}"
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+    when:
+      - not ansible_os_family == "RedHat"
+      - redfish.enable|bool
+
+  - name: Copying Config files to the rhel8 bastion image - redfish
+    shell: |
+      virt-copy-in -a {{ item.hypervisor_image_dir }}/{{ supported_os }}-bastion.qcow2 /tmp/ifcfg-eth0 /etc/sysconfig/network-scripts/
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+    when:
+      - ansible_os_family == "RedHat"
+      - redfish.enable|bool
 
