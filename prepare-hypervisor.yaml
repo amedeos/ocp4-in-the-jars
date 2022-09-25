@@ -21,6 +21,36 @@
     when:
       - kvmhost.set_hosts|bool
 
+  - name: Create ssh key on first host
+    openssh_keypair:
+      path: "{{ ansible_user_dir }}/.ssh/id_rsa"
+      type: rsa
+      size: 4096
+      state: present
+      force: False
+    delegate_to: "{{ groups['kvmhost'][0] }}"
+    run_once: True
+    when:
+      - kvmhost.create_ssh_key|bool
+
+  - name: Fetch pub key from first host
+    fetch:
+      src: "{{ ansible_user_dir }}/.ssh/id_rsa.pub"
+      dest: /tmp/kvmhost-id_rsa.pub
+      flat: True
+    delegate_to: "{{ groups['kvmhost'][0] }}"
+    run_once: True
+    when:
+      - kvmhost.create_ssh_key|bool
+
+  - name: Trust fetched key to all nodes
+    authorized_key:
+      user: "{{ ansible_ssh_user }}"
+      state: present
+      key: "{{ lookup('file', '/tmp/kvmhost-id_rsa.pub') }}"
+    when:
+      - kvmhost.create_ssh_key|bool
+
   - name: Upgrade to latest version
     dnf:
       name: "*"

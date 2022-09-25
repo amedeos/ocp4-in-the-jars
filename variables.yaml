@@ -69,6 +69,7 @@ kvmhost:
   set_hostname: True
   set_hosts: True
   additional_hosts: personal_hosts.j2
+  create_ssh_key: True
 cluster_name: ocp-lab
 base_domain: example.com
 domain: "{{ cluster_name }}.{{ base_domain }}"
