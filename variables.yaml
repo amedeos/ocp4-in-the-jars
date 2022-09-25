@@ -67,6 +67,8 @@ kvmhost:
   baremetal_bridge_isolated: True
   enable_baremetal_gw: False
   set_hostname: True
+  set_hosts: True
+  additional_hosts: personal_hosts.j2
 cluster_name: ocp-lab
 base_domain: example.com
 domain: "{{ cluster_name }}.{{ base_domain }}"

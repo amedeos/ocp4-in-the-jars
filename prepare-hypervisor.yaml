@@ -11,6 +11,16 @@
     when:
       - kvmhost.set_hostname|bool
 
+  - name: Configure hosts
+    template:
+      src: ansible-templates/etc/hosts.j2
+      dest: /etc/hosts
+      backup: True
+      owner: root
+      group: root
+    when:
+      - kvmhost.set_hosts|bool
+
   - name: Upgrade to latest version
     dnf:
       name: "*"

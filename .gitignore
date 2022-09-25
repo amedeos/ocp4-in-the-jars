@@ -9,6 +9,7 @@ hosts-kvmhost*
 *.ORIG
 appunti*
 custom-variables.yaml*
+custom-variables*
 pull-secret.txt
 custom-bm-ansible-nodes.json
 *id_rsa
