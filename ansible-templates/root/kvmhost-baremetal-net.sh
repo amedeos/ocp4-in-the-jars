@@ -15,7 +15,11 @@ nmcli connection modify {{ bridge_bm }} ipv4.method disabled ipv6.method ignore
 nmcli connection up {{ bridge_bm }}
 nmcli connection add type vlan con-name {{ bridge_prov }}.{{ baremetal_net.vlan }} ifname {{ bridge_prov }}.{{ baremetal_net.vlan }} dev {{ bridge_prov }} id {{ baremetal_net.vlan }}
 nmcli connection modify {{ bridge_prov }}.{{ baremetal_net.vlan }} master {{ bridge_bm }} slave-type bridge
+{% if baremetal_net.mtu|float < provision_net.mtu|float  %}
+nmcli connection modify {{ bridge_prov }}.{{ baremetal_net.vlan }} 802-3-ethernet.mtu {{ baremetal_net.mtu }}
+{% else %}
 nmcli connection modify {{ bridge_prov }}.{{ baremetal_net.vlan }} 802-3-ethernet.mtu {{ provision_net.mtu }}
+{% endif %}
 nmcli connection modify {{ bridge_bm }} 802-3-ethernet.mtu {{ baremetal_net.mtu }}
 nmcli connection up {{ bridge_prov }}.{{ baremetal_net.vlan }}
 
