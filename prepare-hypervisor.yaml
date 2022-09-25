@@ -856,9 +856,6 @@
     file:
       path: /root/images
       state: directory
-    when:
-      - kvmhost.provisioning_bridge_isolated|bool
-      - kvmhost.baremetal_bridge_isolated|bool
 
   - name: Overwrite bm-ansible-nodes.json file
     copy:
