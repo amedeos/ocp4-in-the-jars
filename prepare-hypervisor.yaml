@@ -960,6 +960,8 @@
         - "# {{ ansible_default_ipv4.address }} noobaa-mgmt-openshift-storage.apps.{{ domain }}               #"
         - "#                                                                                   #"
         - "#####################################################################################"
+    delegate_to: "{{ groups['kvmhost'][0] }}"
+    run_once: True
     when:
       - ( kvmhost.baremetal_bridge_isolated|bool and kvmhost.provisioning_bridge_isolated|bool ) or ( redfish.enable|bool and redfish.enable_nat|bool )
 
