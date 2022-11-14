@@ -10,7 +10,7 @@ hosts-kvmhost*
 appunti*
 custom-variables.yaml*
 custom-variables*
-pull-secret.txt
+*pull-secret.txt
 custom-bm-ansible-nodes.json
 *id_rsa
 *id_rsa.pub
