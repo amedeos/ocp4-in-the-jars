@@ -83,5 +83,5 @@ image_dir_bastion: /var/lib/libvirt/imagesssd
 image: rhel-9.4-x86_64-kvm.qcow2
 image_location: /root/images/rhel-9.4-x86_64-kvm.qcow2
 pull_secret_file: pull-secret.txt
-supported_os: rhel8
+supported_os: rhel9
 ocpversion: stable-4.16
