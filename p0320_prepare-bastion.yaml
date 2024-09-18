@@ -24,9 +24,9 @@
     - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
-  - name: Copying Template Image to create bastion. RHEL8
+  - name: Copying Template Image to create bastion. RHEL9
     copy:
-      src: "{{ item.hypervisor_image_dir }}/rhel8-bastion.qcow2"
+      src: "{{ item.hypervisor_image_dir }}/rhel9-bastion.qcow2"
       dest: "{{ item.hypervisor_image_dir }}/bastion.qcow2"
       remote_src: True
     delegate_to: "{{ item.hypervisor_name }}"
@@ -173,23 +173,41 @@
     run_once: True
     with_items: "{{ bastion_nodes }}"
 
-  - name: Write ssh/config file
+  - name: Write ssh/config file - no localhost
     blockinfile:
       path: ~/.ssh/config
       backup: True
       state: present
       block: |
         Host {{ item.name }}.{{ domain }}
-        IdentityFile ~/ansible-ssh/id_rsa
+          IdentityFile ~/ansible-ssh/id_rsa
+          UserKnownHostsFile /dev/null
+          StrictHostKeyChecking no
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Write ssh/config file - localhost
+    blockinfile:
+      path: ~/.ssh/config
+      backup: True
+      state: present
+      block: |
+        Host {{ item.name }}.{{ domain }}
+          IdentityFile ansible-ssh/id_rsa
+          UserKnownHostsFile /dev/null
+          StrictHostKeyChecking no
+    delegate_to: "{{ item.hypervisor_name }}"
+    run_once: True
+    with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
 
   - name: Add bastion group-host - no localhost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
-      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_private_key_file: files/.ssh/id_rsa
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
       groups:
         - bastion
@@ -200,7 +218,7 @@
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
-      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_private_key_file: ansible-ssh/id_rsa
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
       groups:
         - bastion
@@ -212,7 +230,7 @@
       dest: hosts-bastion-root
       content: |
         [bastion]
-        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_private_key_file=files/.ssh/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ bastion_nodes }}"
     when: item.hypervisor_name != "localhost"
 
@@ -221,7 +239,7 @@
       dest: hosts-bastion-root
       content: |
         [bastion]
-        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_private_key_file=ansible-ssh/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
     with_items: "{{ bastion_nodes }}"
     when: item.hypervisor_name == "localhost"
 
@@ -271,16 +289,10 @@
 
   - name: Set base repository for the bastion
     shell: |
-      subscription-manager repos --disable='*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms
+      subscription-manager repos --disable='*' --enable=rhel-9-for-x86_64-baseos-rpms --enable=rhel-9-for-x86_64-appstream-rpms
 
-  # maybe the subscription id shouln't has odf subs
-  - name: Enable odf repository for the bastion
-    shell: |
-      subscription-manager repos --enable=rh-odf-4-for-rhel-8-x86_64-rpms
-    ignore_errors: True
-
-  - name: Clean yum cache
-    command: yum clean all
+  - name: Clean dnf cache
+    command: dnf clean all
 
   - name: Updating system to latest version
     dnf:
@@ -303,18 +315,27 @@
         - iptables
         - bash-completion
         - tree
-        - redhat-lsb-core
         - ipmitool
         - nmap
-        - ansible
+        - ansible-core
         - git
+        - jq
 
-  # maybe the subscription id shouln't has odf subs
-  - name: Install mcg
-    dnf:
-      name:
-        - mcg
-    ignore_errors: True
+  - name: Download noobaa-operator
+    shell: |
+      VERSION=$(curl -s https://api.github.com/repos/noobaa/noobaa-operator/releases/latest | jq -r '.name')
+      curl -L https://github.com/noobaa/noobaa-operator/releases/download/$VERSION/noobaa-operator-$VERSION-linux-amd64.tar.gz -o /root/noobaa-operator.tar.gz
+      gunzip /root/noobaa-operator.tar.gz
+
+  - name: Unarchive noobaa-operator
+    unarchive:
+      src: /root/noobaa-operator.tar
+      dest: /usr/local/bin
+      remote_src: True
+      owner: root
+      group: root
+      include:
+        - "./noobaa-operator"
 
   - name: Create User kni
     user:
