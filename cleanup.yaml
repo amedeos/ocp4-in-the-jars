@@ -129,11 +129,11 @@
       path: "{{ image_dir }}/{{ item }}"
       state: absent
     with_items:
-      - rhel8.qcow2
-      - rhel8-100G.qcow2
-      - rhel8-100G-no-eth0.qcow2
-      - rhel8-bastion.qcow2
-      - rhel8-utility.qcow2
+      - rhel9.qcow2
+      - rhel9-100G.qcow2
+      - rhel9-100G-no-eth0.qcow2
+      - rhel9-bastion.qcow2
+      - rhel9-utility.qcow2
       - bastion.qcow2
       - utility.qcow2
       - "{{ image }}"
@@ -143,11 +143,11 @@
       path: "{{ image_dir_bastion }}/{{ item }}"
       state: absent
     with_items:
-      - rhel8.qcow2
-      - rhel8-100G.qcow2
-      - rhel8-100G-no-eth0.qcow2
-      - rhel8-bastion.qcow2
-      - rhel8-utility.qcow2
+      - rhel9.qcow2
+      - rhel9-100G.qcow2
+      - rhel9-100G-no-eth0.qcow2
+      - rhel9-bastion.qcow2
+      - rhel9-utility.qcow2
       - bastion.qcow2
       - utility.qcow2
       - "{{ image }}"
@@ -162,6 +162,7 @@
       - item.state == "present"
     with_items:
       - "{{ worker_nodes }}"
+      - "{{ master_nodes }}"
     ignore_errors: True
 
   - name: Remove odf osd-2 qcow2 files
@@ -174,6 +175,7 @@
       - item.state == "present"
     with_items:
       - "{{ worker_nodes }}"
+      - "{{ master_nodes }}"
     ignore_errors: True
 
   - name: Remove ssh known hosts - bastion
