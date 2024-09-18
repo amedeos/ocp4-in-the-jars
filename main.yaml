@@ -1,43 +1,43 @@
-- import_playbook: create-ssh-key.yaml
+- import_playbook: p0010_create-ssh-key.yaml
   tags:
     - create-ssh-key
 
-- import_playbook: prepare-images-bastion.yaml
+- import_playbook: p0110_prepare-images-bastion.yaml
   tags:
     - prepare-images-bastion
 
-- import_playbook: prepare-images-utility.yaml
+- import_playbook: p0120_prepare-images-utility.yaml
   tags:
     - prepare-images-utility
 
-- import_playbook: create-ocp4-bm-nodes.yaml
+- import_playbook: p0210_create-ocp4-bm-nodes.yaml
   tags:
     - create-ocp4-bm-nodes
 
-- import_playbook: prepare-utility.yaml
+- import_playbook: p0310_prepare-utility.yaml
   tags:
     - prepare-utility
 
-- import_playbook: prepare-bastion.yaml
+- import_playbook: p0320_prepare-bastion.yaml
   tags:
     - prepare-bastion
 
-- import_playbook: configure-bastion.yaml
+- import_playbook: p0410_configure-bastion.yaml
   tags:
     - configure-bastion
 
-- import_playbook: install-ocp.yaml
+- import_playbook: p0510_install-ocp.yaml
   tags:
     - install-ocp
 
-- import_playbook: configure-letsencrypt.yaml
+- import_playbook: p0610_configure-letsencrypt.yaml
   tags:
     - configure-letsencrypt
   when:
     - enable_ddns_duckdns|bool
     - enable_letsencrypt|bool
 
-- import_playbook: scaledown-bastion.yaml
+- import_playbook: p0710_scaledown-bastion.yaml
   tags:
     - scaledown-bastion
   when:

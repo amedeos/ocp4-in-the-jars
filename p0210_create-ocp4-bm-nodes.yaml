@@ -1,10 +1,10 @@
 - name: Create Master Nodes
-  import_playbook: create-masters.yaml
+  import_playbook: p0220_create-masters.yaml
   tags:
     - create-masters
 
 - name: Create Workers Nodes
-  import_playbook: create-workers.yaml
+  import_playbook: p0230_create-workers.yaml
   tags:
     - create-workers
 
