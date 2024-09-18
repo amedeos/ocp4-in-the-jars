@@ -69,12 +69,12 @@
 
   - name: Uncompress openshift-client-linux.tar.gz
     shell: |
-      tar -xvf /home/kni/openshift-client-linux.tar.gz -C /usr/bin/
+      tar -xvf /home/kni/openshift-client-linux.tar.gz --overwrite -C /usr/bin/
     become: True
 
   - name: Uncompress openshift-install-linux.tar.gz
     shell: |
-      tar -xvf /home/kni/openshift-install-linux.tar.gz -C /usr/bin/
+      tar -xvf /home/kni/openshift-install-linux.tar.gz --overwrite -C /usr/bin/
     become: True
 
   - name: Create bash completion file
@@ -95,7 +95,7 @@
     shell: |
       export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/{{ ocpversion }}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
       oc adm release extract --registry-config "/home/kni/pull-secret.txt" --command=openshift-baremetal-install --to "/home/kni" ${RELEASE_IMAGE}
-      sudo cp /home/kni/openshift-baremetal-install /usr/bin/
+      sudo cp -f /home/kni/openshift-baremetal-install /usr/bin/
 
   - name: Create /home/kni/rhcos_image_cache directory
     file:
