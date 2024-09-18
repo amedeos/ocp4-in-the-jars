@@ -24,9 +24,9 @@
     - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
-  - name: Copying Template Image to create utility. RHEL8
+  - name: Copying Template Image to create utility. RHEL9
     copy:
-      src: "{{ item.hypervisor_image_dir }}/rhel8-utility.qcow2"
+      src: "{{ item.hypervisor_image_dir }}/rhel9-utility.qcow2"
       dest: "{{ item.hypervisor_image_dir }}/utility.qcow2"
       remote_src: True
     delegate_to: "{{ item.hypervisor_name }}"
@@ -35,7 +35,7 @@
 
   - name: Defining the utility vm - virtualbmc
     shell: |
-      virt-install --ram {{ utility.memory }} --vcpus {{ utility.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ utility.memory }} --vcpus {{ utility.cpu }} --os-variant {{ utility.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -45,7 +45,7 @@
 
   - name: Defining the utility vm - redfish
     shell: |
-      virt-install --ram {{ utility.memory }} --vcpus {{ utility.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ utility.memory }} --vcpus {{ utility.cpu }} --os-variant {{ utility.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/utility.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -180,7 +180,9 @@
       state: present
       block: |
         Host {{ item.name }}.{{ domain }}
-        IdentityFile ~/ansible-ssh/id_rsa
+          IdentityFile ansible-ssh/id_rsa
+          UserKnownHostsFile /dev/null
+          StrictHostKeyChecking no
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ utility_nodes }}"
@@ -189,7 +191,7 @@
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
-      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_private_key_file: ansible-ssh/id_rsa
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
       groups:
         - utility
@@ -200,7 +202,7 @@
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_user: root
-      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_private_key_file: ansible-ssh/id_rsa
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
       groups:
         - utility
@@ -212,7 +214,7 @@
       dest: hosts-utility-root
       content: |
         [utility]
-        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_private_key_file=ansible-ssh/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
     with_items: "{{ utility_nodes }}"
     when: item.hypervisor_name != "localhost"
 
@@ -221,7 +223,7 @@
       dest: hosts-utility-root
       content: |
         [utility]
-        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_pass={{ secure_password }} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+        {{ item.name }}.{{ domain }} ansible_ssh_user=root ansible_ssh_private_key_file=ansible-ssh/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
     with_items: "{{ utility_nodes }}"
     when: item.hypervisor_name == "localhost"
 
@@ -272,10 +274,10 @@
 
   - name: Set repository for the utility
     shell: |
-      subscription-manager repos --disable='*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms 
+      subscription-manager repos --disable='*' --enable=rhel-9-for-x86_64-baseos-rpms --enable=rhel-9-for-x86_64-appstream-rpms
 
-  - name: Clean yum cache
-    command: yum clean all
+  - name: Clean dnf cache
+    command: dnf clean all
 
   - name: Updating system to latest version
     dnf:
@@ -301,7 +303,6 @@
         - iptables
         - bash-completion
         - tree
-        - redhat-lsb-core
         - ipmitool
 
   - name: Create User kni
