@@ -5,10 +5,16 @@ metadata:
 networking:
   machineNetwork:
   - cidr: {{ baremetal_net.net }}/{{ baremetal_net.prefix }}
-  networkType: OpenShiftSDN
+  networkType: OVNKubernetes
 compute:
+{% if three_node_cluster == True  %}
+- name: worker
+  replicas: 0
+  platform: {}
+{% else %}
 - name: worker
   replicas: 2
+{% endif %}
 controlPlane:
   name: master
   replicas: 3
@@ -53,6 +59,7 @@ platform:
         bootMode: legacy
 {% endif %}
 {% endfor %}
+{% if three_node_cluster != True  %}
 {% for host in worker_nodes %}
 {% if host != 'localhost' %}
       - name: {{ host.name }}
@@ -76,3 +83,4 @@ platform:
         bootMode: legacy
 {% endif %}
 {% endfor %}
+{% endif %}
