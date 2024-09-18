@@ -195,7 +195,7 @@
       state: present
       block: |
         Host {{ item.name }}.{{ domain }}
-          IdentityFile ~/ansible-ssh/id_rsa
+          IdentityFile ansible-ssh/id_rsa
           UserKnownHostsFile /dev/null
           StrictHostKeyChecking no
     delegate_to: "{{ item.hypervisor_name }}"
