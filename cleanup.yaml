@@ -5,7 +5,7 @@
     - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
-  - name: Add bastion group-host for cleanup
+  - name: Add bastion group-host for cleanup - no localhost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
@@ -16,8 +16,22 @@
         - bastion
     with_items:
       - "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
 
-  - name: Add utility group-host for cleanup
+  - name: Add bastion group-host for cleanup - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+  - name: Add utility group-host for cleanup - no locahost
     add_host:
       name: "{{ item.name }}.{{ domain }}"
       ansible_ssh_pass: "{{ secure_password }}"
@@ -28,6 +42,20 @@
         - utility
     with_items:
       - "{{ utility_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Add utility group-host for cleanup - locahost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_become: True
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - utility
+    with_items:
+      - "{{ utility_nodes }}"
+    when: item.hypervisor_name == "localhost"
 
   - name: Add all hypervisor group-host
     add_host:
