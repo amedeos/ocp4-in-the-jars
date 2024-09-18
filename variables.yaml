@@ -52,8 +52,8 @@ bastion:
   post_scaledown: True
   virt_os_variant: "{{ virt_os_variant }}"
 master:
-  cpu: 8
-  memory: 49152
+  cpu: 12
+  memory: 57344
   disk: 150G
   osd_disk: 500G
   virt_os_variant: "{{ virt_os_variant }}"
