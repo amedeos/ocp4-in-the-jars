@@ -3,6 +3,7 @@ bridge_bm: bm
 libguestfs_path: /usr/share/guestfs/appliance/
 dns_ip_utility: 1.1.1.1
 three_node_cluster: True
+virt_os_variant: rhel9.4
 redfish:
   enable: True
   config_file: /etc/sushy-emulator/sushy-emulator.conf
@@ -41,6 +42,7 @@ utility:
   cpu: 2
   memory: 2048
   disk: 100G
+  virt_os_variant: "{{ virt_os_variant }}"
 bastion:
   cpu: 6
   memory: 16384
@@ -48,16 +50,19 @@ bastion:
   post_cpu: 2
   post_memory: 4096
   post_scaledown: True
+  virt_os_variant: "{{ virt_os_variant }}"
 master:
   cpu: 8
   memory: 49152
   disk: 150G
   osd_disk: 500G
+  virt_os_variant: "{{ virt_os_variant }}"
 worker:
   cpu: 8
   memory: 32768
   disk: 150G
   osd_disk: 400G
+  virt_os_variant: "{{ virt_os_variant }}"
 kvmhost:
   enable_selinux: True
   reboot_timeout: 1200

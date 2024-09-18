@@ -35,7 +35,7 @@
 
   - name: Defining the bastion vm - virtualbmc
     shell: |
-      virt-install --ram {{ bastion.memory }} --vcpus {{ bastion.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/bastion.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ bastion.memory }} --vcpus {{ bastion.cpu }} --os-variant {{ bastion.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/bastion.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }} --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -45,7 +45,7 @@
 
   - name: Defining the bastion vm - redfish
     shell: |
-      virt-install --ram {{ bastion.memory }} --vcpus {{ bastion.cpu }} --os-variant rhel8.5 --disk path={{ item.hypervisor_image_dir }}/bastion.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ bastion.memory }} --vcpus {{ bastion.cpu }} --os-variant {{ bastion.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/bastion.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True

@@ -43,7 +43,7 @@
 
   - name: Defining master VMs - virtualbmc
     shell: |
-      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant rhel9.4 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant {{ master.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -54,7 +54,7 @@
 
   - name: Defining master VMs - redfish
     shell: |
-      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant rhel9.4 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant {{ master.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -65,7 +65,7 @@
   
   - name: ODF - Defining master VMs - virtualbmc
     shell: |
-      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant rhel9.4 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant {{ master.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_prov }},mac={{ item.provisioning_mac }} --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
@@ -76,7 +76,7 @@
 
   - name: ODF - Defining master VMs - redfish
     shell: |
-      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant rhel9.4 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
+      virt-install --ram {{ master.memory }} --vcpus {{ master.cpu }} --os-variant {{ master.virt_os_variant }} --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}.qcow2,device=disk,bus=virtio,format=qcow2 --disk path={{ item.hypervisor_image_dir }}/{{ item.name }}-osd-1.qcow2,device=disk,bus=virtio,format=qcow2 --noautoconsole --vnc --network bridge:{{ bridge_bm }},mac={{ item.baremetal_mac }} --name {{ item.name }} --cpu host-passthrough --dry-run --print-xml > /tmp/{{ item.name }}.xml
       virsh define /tmp/{{ item.name }}.xml
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
