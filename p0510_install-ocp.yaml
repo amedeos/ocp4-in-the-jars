@@ -55,6 +55,9 @@
     - vault-variables.yaml
     - bm-ansible-nodes.json
   tasks:
+  - name: Simple exit
+    shell: exit 1
+
   - name: Run create cluster
     shell: |
       openshift-baremetal-install --dir /home/kni/{{ cluster_name }} --log-level debug create cluster

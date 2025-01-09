@@ -1,0 +1,269 @@
+- name:  Add hypervisor host in inventory
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add all hypervisor group-host
+    add_host:
+      name: "{{ item.hypervisor_name }}"
+      ansible_ssh_user: "{{ item.hypervisor_user }}"
+      ansible_ssh_private_key_file: "{{ item.hypervisor_ssh_key }}"
+      groups:
+        - hypervisor_host
+    when:
+      - item.state == "present"
+    with_items: "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+- name:  Add Bastion VM/Node
+  hosts: localhost
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Add bastion group-host - no localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q {{ item.hypervisor_user }}@{{ item.hypervisor_name }}"'
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name != "localhost"
+
+  - name: Add bastion group-host - localhost
+    add_host:
+      name: "{{ item.name }}.{{ domain }}"
+      ansible_ssh_pass: "{{ secure_password }}"
+      ansible_ssh_user: kni
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+      groups:
+        - bastion
+    with_items:
+      - "{{ bastion_nodes }}"
+    when: item.hypervisor_name == "localhost"
+
+- name: Prepare Mirror on Bastion
+  hosts: bastion
+  vars_files:
+    - variables.yaml
+    - vault-variables.yaml
+    - bm-ansible-nodes.json
+  tasks:
+  - name: Download mirror-registry
+    get_url:
+      url: "https://developers.redhat.com/content-gateway/file/pub/openshift-v4/clients/mirror-registry/{{ mirror_registry.version }}/mirror-registry.tar.gz"
+      dest: /home/kni/mirror-registry.tar.gz
+      mode: 0664
+
+  - name: Uncompress mirror-registry.tar.gz
+    shell: |
+      tar -xvf /home/kni/mirror-registry.tar.gz --overwrite -C /usr/bin/
+    become: True
+
+  - name: Create /home/kni/quay directory
+    file:
+      path: /home/kni/quay
+      state: directory
+      owner: kni
+      group: kni
+
+  - name: Check if quay is already installed
+    shell: |
+      curl -s -k https://bastion.{{ cluster_name }}.{{ base_domain }}:8443/health/instance | jq .status_code
+    register: quay_status
+    retries: 10
+    delay: 10
+    until: quay_status.stdout == "200"
+    ignore_errors: True
+
+  - name: Run quay installation
+    shell: |
+      mirror-registry install --quayHostname bastion.{{ cluster_name }}.{{ base_domain }} --quayRoot /home/kni/quay |& tee -a /home/kni/quay_install.log
+    register: quay_install
+    when:
+      - quay_status.stdout != "200"
+
+  - name: Get init password
+    shell: |
+      egrep 'with credentials\s+\(init' /home/kni/quay_install.log | awk -F"init," '{print $2}' | sed -E 's/\s+//g' | sed -E 's/\)$//g'
+    register: quay_init_password
+
+  - debug:
+      var: quay_init_password.stdout
+
+  - name: Set quay init password
+    set_fact:
+      _quay_init_password: "{{ quay_init_password.stdout }}"
+
+  - name: Create base64 AUTH_QUAY
+    shell: |
+      echo -n 'init:{{ _quay_init_password }}' | base64 -w0
+    register: auth_quay_base64
+      
+  - name: Set fact for base64 AUTH_QUAY
+    set_fact:
+      _auth_quay_base64: "{{ auth_quay_base64.stdout }}"
+
+  - name: Copy quay CA to /etc/pki/ca-trust/source/anchors
+    copy:
+      remote_src: True
+      src: /home/kni/quay/quay-rootCA/rootCA.pem
+      dest: /etc/pki/ca-trust/source/anchors/quay-rootCA.pem
+      owner: root
+      group: root
+      mode: 0644
+    become: True
+
+  - name: Run update-ca-trust
+    shell: |
+      /usr/bin/update-ca-trust extract
+    become: True
+
+  - name: Podman login to quay
+    shell: |
+      podman login -u init -p {{ _quay_init_password }} bastion.{{ cluster_name }}.{{ base_domain }}:8443
+
+  - name: Get current oc client version
+    shell: |
+      oc version --client -ojson | jq -r .releaseClientVersion
+    register: oc_client_version
+
+  - name: Set oc client version fact
+    set_fact:
+      _oc_client_version: "{{ oc_client_version.stdout }}"
+
+  - name: Create pull-secret.json
+    shell: |
+      cat /home/kni/pull-secret.txt | jq . > /home/kni/pull-secret-temp.json
+      jq '.auths |= . + { "bastion.{{ cluster_name }}.{{ base_domain }}:8443": { "auth": "{{ _auth_quay_base64 }}", "email": "{{ rh_subcription_user }}"} }' pull-secret-temp.json > /home/kni/pull-secret.json
+
+  - name: Create quay-repository directory
+    file:
+      path: /home/kni/quay-repository
+      state: directory
+      owner: kni
+      group: kni
+
+  - name: Set sync date
+    shell: |
+      date +%Y%m%d
+    register: sync_date
+
+  - name: Set _sync_date fact
+    set_fact:
+      _sync_date: "{{ sync_date.stdout }}"
+
+  - name: Run mirror in dry-run mode
+    shell: |
+      OCP_RELEASE={{ _oc_client_version }}
+      LOCAL_REGISTRY='bastion.{{ cluster_name }}.{{ base_domain }}:8443'
+      LOCAL_REPOSITORY='ocp4/openshift4'
+      PRODUCT_REPO='openshift-release-dev'
+      LOCAL_SECRET_JSON='/home/kni/pull-secret.json'
+      RELEASE_NAME="ocp-release"
+      ARCHITECTURE=x86_64
+      REMOVABLE_MEDIA_PATH=/home/kni/quay-repository
+      echo "### Run oc adm release mirror in dry-run {{ _sync_date }} - $(date)" |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      oc adm release mirror -a ${LOCAL_SECRET_JSON} --from=quay.io/${PRODUCT_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-${ARCHITECTURE} --to=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY} --to-release-image=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}-${ARCHITECTURE} --dry-run |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      STATUS=$?
+      echo "### END Run oc adm release mirror in dry-run {{ _sync_date }} - $(date)" |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      exit ${STATUS}
+
+  - name: Mirror the images
+    shell: |
+      OCP_RELEASE={{ _oc_client_version }}
+      LOCAL_REGISTRY='bastion.{{ cluster_name }}.{{ base_domain }}:8443'
+      LOCAL_REPOSITORY='ocp4/openshift4'
+      PRODUCT_REPO='openshift-release-dev'
+      LOCAL_SECRET_JSON='/home/kni/pull-secret.json'
+      RELEASE_NAME="ocp-release"
+      ARCHITECTURE=x86_64
+      REMOVABLE_MEDIA_PATH=/home/kni/quay-repository
+      echo "### Run oc adm release mirror {{ _sync_date }} - $(date)" |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      oc adm release mirror -a ${LOCAL_SECRET_JSON} --to-dir=${REMOVABLE_MEDIA_PATH}/mirror quay.io/${PRODUCT_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-${ARCHITECTURE} |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      STATUS=$?
+      echo "### END Run oc adm release mirror {{ _sync_date }} - $(date)" |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      exit ${STATUS}
+
+  - name: Run the oc image mirror
+    shell: |
+      OCP_RELEASE={{ _oc_client_version }}
+      LOCAL_REGISTRY='bastion.{{ cluster_name }}.{{ base_domain }}:8443'
+      LOCAL_REPOSITORY='ocp4/openshift4'
+      PRODUCT_REPO='openshift-release-dev'
+      LOCAL_SECRET_JSON='/home/kni/pull-secret.json'
+      RELEASE_NAME="ocp-release"
+      ARCHITECTURE=x86_64
+      REMOVABLE_MEDIA_PATH=/home/kni/quay-repository
+      echo "### Run oc image mirror {{ _sync_date }} - $(date)" |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      oc image mirror -a ${LOCAL_SECRET_JSON} --from-dir=${REMOVABLE_MEDIA_PATH}/mirror "file://openshift/release:${OCP_RELEASE}*" ${LOCAL_REGISTRY}/${LOCAL_REPOSITORY} |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      STATUS=$?
+      echo "### END Run oc image mirror {{ _sync_date }} - $(date)" |& tee -a /home/kni/oc_adm_release_mirror_{{ _sync_date }}.log
+      exit ${STATUS}
+    register: oc_image_mirror
+    retries: 3
+    delay: 10
+    until: oc_image_mirror.rc == 0
+
+  - name: Extract openshift-baremetal-install command
+    shell: |
+      OCP_RELEASE={{ _oc_client_version }}
+      LOCAL_REGISTRY='bastion.{{ cluster_name }}.{{ base_domain }}:8443'
+      LOCAL_REPOSITORY='ocp4/openshift4'
+      PRODUCT_REPO='openshift-release-dev'
+      LOCAL_SECRET_JSON='/home/kni/pull-secret.json'
+      RELEASE_NAME="ocp-release"
+      ARCHITECTURE=x86_64
+      REMOVABLE_MEDIA_PATH=/home/kni/quay-repository
+      cd ~
+   
+      oc adm release extract -a ${LOCAL_SECRET_JSON} --command=openshift-baremetal-install "${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}-${ARCHITECTURE}"
+
+  - name: Extract openshift-install command
+    shell: |
+      OCP_RELEASE={{ _oc_client_version }}
+      LOCAL_REGISTRY='bastion.{{ cluster_name }}.{{ base_domain }}:8443'
+      LOCAL_REPOSITORY='ocp4/openshift4'
+      PRODUCT_REPO='openshift-release-dev'
+      LOCAL_SECRET_JSON='/home/kni/pull-secret.json'
+      RELEASE_NAME="ocp-release"
+      ARCHITECTURE=x86_64
+      REMOVABLE_MEDIA_PATH=/home/kni/quay-repository
+      cd ~
+   
+      oc adm release extract -a ${LOCAL_SECRET_JSON} --command=openshift-install "${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}-${ARCHITECTURE}"
+
+  - name: Copy openshift-baremetal-install to /usr/bin
+    copy:
+      remote_src: True
+      src: /home/kni/openshift-baremetal-install
+      dest: /usr/bin/openshift-baremetal-install
+      owner: root
+      group: root
+      mode: 0755
+    become: True
+
+  - name: Copy openshift-install to /usr/bin
+    copy:
+      remote_src: True
+      src: /home/kni/openshift-install
+      dest: /usr/bin/openshift-install
+      owner: root
+      group: root
+      mode: 0755
+    become: True
+
+  - name: Create bash_completion files
+    shell: |
+      openshift-baremetal-install completion bash > /etc/bash_completion.d/openshift-baremetal-install
+      openshift-install completion bash > /etc/bash_completion.d/openshift-install
+    become: True
+
+
+  #### oc adm catalog mirror registry.redhat.io/redhat/redhat-operator-index:v4.16 bastion.ocp-lab.example.com:8443/redhat-operator-index -a ${LOCAL_SECRET_JSON}  --index-filter-by-os='linux/amd64'

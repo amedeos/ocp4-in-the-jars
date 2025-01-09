@@ -44,24 +44,24 @@ utility:
   disk: 100G
   virt_os_variant: "{{ virt_os_variant }}"
 bastion:
-  cpu: 6
-  memory: 16384
-  disk: 100G
+  cpu: 8
+  memory: 32768
+  disk: 300G
   post_cpu: 2
   post_memory: 4096
   post_scaledown: True
   virt_os_variant: "{{ virt_os_variant }}"
 master:
-  cpu: 12
-  memory: 57344
+  cpu: 8
+  memory: 32768
   disk: 150G
   osd_disk: 500G
   virt_os_variant: "{{ virt_os_variant }}"
 worker:
-  cpu: 8
-  memory: 32768
+  cpu: 4
+  memory: 16384
   disk: 150G
-  osd_disk: 400G
+  osd_disk: 500G
   virt_os_variant: "{{ virt_os_variant }}"
 kvmhost:
   enable_selinux: True
@@ -77,6 +77,9 @@ kvmhost:
   set_hosts: True
   additional_hosts: personal_hosts.j2
   create_ssh_key: True
+mirror_registry:
+  enable: True
+  version: 2.0.0
 cluster_name: ocp-lab
 base_domain: example.com
 domain: "{{ cluster_name }}.{{ base_domain }}"
