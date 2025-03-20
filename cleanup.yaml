@@ -293,6 +293,7 @@
       block: |
         Host {{ item.name }}.{{ domain }}
         IdentityFile ~/ansible-ssh/id_rsa
+    ignore_errors: True
     delegate_to: "{{ item.hypervisor_name }}"
     run_once: True
     with_items: "{{ utility_nodes }}"
