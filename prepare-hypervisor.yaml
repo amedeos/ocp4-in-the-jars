@@ -315,6 +315,27 @@
       - ansible_distribution_release == "Stream"
       - ansible_distribution_major_version == "8"
 
+  - name: Enable CRB repo
+    shell: |
+      dnf config-manager --set-enabled crb
+    when:
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
+      - ansible_distribution_major_version == "9"
+
+  - name: Install for libvirt
+    dnf:
+      name:
+        - libvirt-devel
+        - pkg-config 
+        - python3-devel
+        - gcc
+        - python3-lxml
+    when:
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
+      - ansible_distribution_major_version == "9"
+
   - name: Install centos-release-openstack-dalmatian.noarch
     shell: |
       dnf install -y centos-release-openstack-dalmatian.noarch
