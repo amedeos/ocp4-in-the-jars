@@ -421,6 +421,3 @@
       state: restarted
       daemon_reload: True
       enabled: True
-
-  - name: Simple exit
-    shell: exit 1
