@@ -276,19 +276,27 @@
         - pciutils
         - libvirt
         - qemu-kvm
-        - virt-manager
         - virt-install
         - libguestfs-tools
         - libguestfs-xfs
         - virt-viewer
         - net-tools
-        - mlocate
         - sshpass
-        - redhat-lsb-core
         - podman
         - ipmitool
         - tree
       state: present
+
+  - name: Install packages on CentOS
+    dnf:
+      name:
+        - virt-manager
+        - mlocate
+        - guestfs-tools
+      state: present
+    when:
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
 
   - name: Install keepalived
     dnf:
@@ -299,25 +307,21 @@
       - kvmhost.enable_baremetal_gw|bool
       - baremetal_ip is defined
 
-  #- name: Install centos-release-ansible-29.noarch
-  #  shell: |
-  #    dnf install -y centos-release-ansible-29.noarch
-  #  when:
-  #    - ansible_distribution == "CentOS"
-  #    - ansible_distribution_release == "Stream"
-
-  #- name: Install ansible
-  #  dnf:
-  #    name:
-  #      - ansible
-  #    state: present
-
   - name: Install centos-release-openstack-yoga.noarch
     shell: |
       dnf install -y centos-release-openstack-yoga.noarch
     when:
       - ansible_distribution == "CentOS"
       - ansible_distribution_release == "Stream"
+      - ansible_distribution_major_version == "8"
+
+  - name: Install centos-release-openstack-dalmatian.noarch
+    shell: |
+      dnf install -y centos-release-openstack-dalmatian.noarch
+    when:
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
+      - ansible_distribution_major_version == "9"
 
   - name: Install rdo-release-yoga-1.el8.noarch.rpm
     shell: |
@@ -325,6 +329,31 @@
     when:
       - ansible_distribution != "CentOS"
       - ansible_os_family == "RedHat"
+      - ansible_distribution_major_version == "8"
+
+  - name: Install packaged on CentOS 10
+    dnf:
+      name: 
+        - ncurses-devel
+        - gcc
+        - readline-devel
+        - xz-devel
+        - lzma
+        - bzip2-devel
+        - zlib-devel
+        - bzip2
+        - sqlite
+        - sqlite-devel
+        - openssl-devel
+        - libffi-devel
+        - findutils
+        - make
+      state: present
+    when:
+      - not redfish.enable|bool
+      - ansible_distribution == "CentOS"
+      - ansible_distribution_release == "Stream"
+      - ansible_distribution_major_version == "10"
 
   - name: Install virtualbmc
     dnf:
@@ -349,12 +378,6 @@
       state: present
     when:
       - redfish.enable|bool
-
-  - name: Install ansible
-    dnf:
-      name:
-        - ansible
-      state: present
 
   - name: Add sushy-tools user to libvirt group
     user:

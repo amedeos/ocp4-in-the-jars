@@ -20,8 +20,8 @@ done
 # create provisioning bridge {{ bridge_prov }}
 nmcli connection add ifname {{ bridge_prov }} type bridge con-name {{ bridge_prov }}
 nmcli con add type bridge-slave ifname {{ ansible_default_ipv4.interface }} master {{ bridge_prov }}
-nmcli connection modify {{ bridge_prov }} ipv4.method manual
 nmcli connection modify {{ bridge_prov }} ipv4.addresses {{ ansible_default_ipv4.address }}/{{ ansible_default_ipv4.prefix }}
+nmcli connection modify {{ bridge_prov }} ipv4.method manual
 nmcli connection modify {{ bridge_prov }} ipv4.gateway {{ ansible_default_ipv4.gateway }}
 nmcli connection modify {{ bridge_prov }} ipv4.dns {{ ansible_dns.nameservers[0] }}
 {% if ansible_dns.search is defined and ansible_dns.search %}
