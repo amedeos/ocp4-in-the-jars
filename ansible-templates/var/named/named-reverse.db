@@ -10,7 +10,7 @@ $TTL  1D
 
 
 {{ vip.apilast }}        IN PTR api.{{ domain }}.
-{{ vip.apiintlast }}        IN PTR api-int.{{ domain }}.
+; {{ vip.apiintlast }}        IN PTR api-int.{{ domain }}.
 
 ; bastion nodes
 {% for host in bastion_nodes %}

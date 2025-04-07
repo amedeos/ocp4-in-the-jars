@@ -14,7 +14,7 @@ dns                       IN A {{ host.baremetal_ip }}
 {% endif %}
 {% endfor %}
 api                       IN A {{ vip.api }}
-api-int                   IN A {{ vip.apiint }}
+; api-int                   IN A {{ vip.apiint }}
 *.apps                    IN A {{ vip.apps }}
 ; bastion nodes
 {% for host in bastion_nodes %}
